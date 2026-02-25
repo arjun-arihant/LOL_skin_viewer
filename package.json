@@ -1,0 +1,16 @@
+{
+  "name": "lol-skin-viewer",
+  "version": "1.0.0",
+  "description": "League of Legends Owned Skin Viewer using LCU API + Data Dragon",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "devDependencies": {
+    "electron": "^29.0.0"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  }
+}

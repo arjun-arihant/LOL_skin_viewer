@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LoL Skin Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ─── CUSTOM TITLEBAR ─────────────────────────────────────────── -->
+  <header class="titlebar" id="titlebar">
+    <div class="titlebar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="16,2 30,10 30,22 16,30 2,22 2,10" fill="none" stroke="#c89b3c" stroke-width="1.5"/>
+          <polygon points="16,7 25,12 25,20 16,25 7,20 7,12" fill="#c89b3c" opacity="0.15"/>
+          <path d="M16 9 L21 13 L19 20 L16 22 L13 20 L11 13 Z" fill="#c89b3c" opacity="0.7"/>
+        </svg>
+      </div>
+      <span class="logo-text">Skin Collection</span>
+    </div>
+
+    <div class="titlebar-center" id="summoner-header">
+      <!-- populated by JS -->
+    </div>
+
+    <div class="titlebar-controls">
+      <button class="win-btn" id="btn-minimize" title="Minimize">&#x2013;</button>
+      <button class="win-btn" id="btn-maximize" title="Maximize">&#x25A1;</button>
+      <button class="win-btn close" id="btn-close" title="Close">&#x2715;</button>
+    </div>
+  </header>
+
+  <!-- ─── MAIN LAYOUT ─────────────────────────────────────────────── -->
+  <div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Champions</span>
+        <span class="champ-count" id="champ-count">—</span>
+      </div>
+      <div class="sidebar-search-wrap">
+        <input
+          type="text"
+          id="champ-search"
+          class="champ-search"
+          placeholder="Search champion…"
+          autocomplete="off"
+        />
+      </div>
+      <div class="champ-list" id="champ-list">
+        <!-- Champions populated by JS -->
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+      <!-- TOP BAR -->
+      <div class="topbar">
+        <div class="topbar-left">
+          <h1 class="section-title">
+            <span id="filter-label">All Skins</span>
+            <span class="skin-count-badge" id="skin-count-badge">0</span>
+          </h1>
+        </div>
+        <div class="topbar-right">
+          <div class="search-wrap">
+            <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+              <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M13.5 13.5 L17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <input
+              type="text"
+              id="skin-search"
+              class="skin-search"
+              placeholder="Search skins…"
+              autocomplete="off"
+            />
+          </div>
+          <button class="btn-refresh" id="btn-refresh" title="Refresh">
+            <svg viewBox="0 0 20 20" fill="none">
+              <path d="M17 10A7 7 0 1 0 10 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <polyline points="14,7 17,10 14,13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- SKIN GRID -->
+      <div class="skin-grid" id="skin-grid">
+        <!-- Cards populated by JS -->
+      </div>
+
+      <!-- EMPTY STATE -->
+      <div class="empty-state" id="empty-state" style="display:none">
+        <div class="empty-icon">🎭</div>
+        <h2>No skins found</h2>
+        <p>Try adjusting your filters or search term</p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ─── LOADING OVERLAY ─────────────────────────────────────────── -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-content">
+      <div class="loading-hexagon">
+        <svg viewBox="0 0 60 60">
+          <polygon points="30,3 55,17 55,43 30,57 5,43 5,17"
+            fill="none" stroke="#c89b3c" stroke-width="1.5"
+            stroke-dasharray="200" stroke-dashoffset="200">
+            <animate attributeName="stroke-dashoffset" from="200" to="0"
+              dur="1.5s" repeatCount="indefinite"/>
+          </polygon>
+        </svg>
+      </div>
+      <p class="loading-text" id="loading-text">Connecting to League Client…</p>
+    </div>
+  </div>
+
+  <!-- ─── ERROR OVERLAY ───────────────────────────────────────────── -->
+  <div class="error-overlay" id="error-overlay" style="display:none">
+    <div class="error-content">
+      <div class="error-icon">⚠️</div>
+      <h2 class="error-title" id="error-title">League Client Not Found</h2>
+      <p class="error-msg" id="error-msg">Please open the League of Legends client and log in, then try again.</p>
+      <button class="btn-retry" id="btn-retry">Try Again</button>
+    </div>
+  </div>
+
+  <!-- ─── SKIN DETAIL MODAL ───────────────────────────────────────── -->
+  <div class="modal-backdrop" id="modal-backdrop" style="display:none">
+    <div class="modal" id="skin-modal">
+      <button class="modal-close" id="modal-close">&#x2715;</button>
+      <img class="modal-splash" id="modal-splash" src="" alt="" />
+      <div class="modal-info">
+        <p class="modal-champ" id="modal-champ"></p>
+        <h2 class="modal-name" id="modal-name"></h2>
+        <p class="modal-id" id="modal-id"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
