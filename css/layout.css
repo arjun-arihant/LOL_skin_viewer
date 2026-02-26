@@ -1,0 +1,7 @@
+/* ═══ APP LAYOUT ══════════════════════════════════════════════════════════════ */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  padding-top: var(--titlebar-h);
+}
+

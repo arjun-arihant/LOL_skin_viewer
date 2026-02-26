@@ -1,0 +1,209 @@
+/* ═══ EMPTY STATE ═════════════════════════════════════════════════════════════ */
+.empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.empty-icon {
+  font-size: 42px;
+  margin-bottom: 14px;
+}
+
+.empty-state h2 {
+  font-family: 'Cinzel', serif;
+  font-size: 18px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.empty-state p {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ═══ LOADING OVERLAY ═════════════════════════════════════════════════════════ */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  transition: opacity 0.4s ease;
+}
+
+.loading-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-content {
+  text-align: center;
+}
+
+.loading-hexagon {
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 20px;
+}
+
+.loading-hexagon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.loading-text {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* ═══ ERROR OVERLAY ═══════════════════════════════════════════════════════════ */
+.error-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1900;
+}
+
+.error-content {
+  text-align: center;
+  max-width: 380px;
+  padding: 36px;
+  background: var(--bg-surface);
+  border: 1px solid rgba(200, 155, 60, 0.18);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.error-icon {
+  font-size: 42px;
+  margin-bottom: 18px;
+}
+
+.error-title {
+  font-family: 'Cinzel', serif;
+  font-size: 18px;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.error-msg {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 22px;
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+  border: none;
+  color: #1a1400;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 9px 26px;
+  border-radius: 22px;
+  cursor: pointer;
+  transition: opacity var(--ease), transform var(--ease);
+}
+
+.btn-gold:hover {
+  opacity: 0.88;
+  transform: scale(1.03);
+}
+
+/* ═══ MODAL ═══════════════════════════════════════════════════════════════════ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(5px);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal {
+  position: relative;
+  max-width: 700px;
+  width: 92%;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--border-bright);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.7), var(--shadow-glow);
+  animation: slideUp 0.25s ease;
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 13px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: background var(--ease);
+}
+
+.modal-close:hover {
+  background: rgba(192, 57, 43, 0.7);
+}
+
+.modal-splash {
+  width: 100%;
+  display: block;
+  max-height: 360px;
+  object-fit: cover;
+  object-position: top;
+}
+
+.modal-info {
+  padding: 14px 18px 18px;
+}
+
+.modal-champ {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 3px;
+}
+
+.modal-name {
+  font-family: 'Cinzel', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.modal-id {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+

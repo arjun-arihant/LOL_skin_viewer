@@ -1,0 +1,205 @@
+/* ═══ SKIN CARD ═══════════════════════════════════════════════════════════════ */
+.skin-card {
+  position: relative;
+  border-radius: 0;
+  overflow: visible;
+  cursor: pointer;
+  background: transparent;
+  width: 100%;
+
+  /* THE MAGIC RATIO: Internal image frame is exactly 260x381 (reduced by 2px each side, 1px bottom) */
+  aspect-ratio: 260 / 381;
+
+  /* Extra margin strictly to prevent the flared-out borders/gems below from overlapping */
+  margin-bottom: 26px;
+  transition: transform var(--ease), box-shadow var(--ease);
+}
+
+.skin-card:hover {
+  transform: translateY(-4px) scale(1.015);
+  box-shadow: var(--shadow-glow), var(--shadow-card);
+}
+
+.skin-card:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Border overlay — CDragon tier-specific border image */
+.skin-card-border {
+  position: absolute;
+  /* The border itself is 264px wide, but container is 260px */
+  width: calc(264 / 260 * 100%);
+  height: auto;
+
+  /* Shift left by 2px (relative to 260px container) */
+  left: calc(-2 / 260 * 100%);
+
+  /* Nudge upwards by 13px */
+  top: calc(-13 / 260 * 100%);
+
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Transcendent border flares start slightly lower (15px from the top) */
+.skin-card.transcendent .skin-card-border {
+  top: calc(-15 / 260 * 100%);
+}
+
+/* Skin image perfectly maps to its 264x382 bounding box parent */
+.skin-card-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  transition: transform 0.35s ease;
+  z-index: 1;
+}
+
+.skin-card:hover .skin-card-img {
+  transform: scale(1.04);
+}
+
+.skin-card-img.loading {
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0.02) 25%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.02) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+/* Bottom name overlay - hidden by default to match actual client */
+.skin-card-overlay {
+  display: none;
+}
+
+/* (Name overlay hidden to match actual client) */
+
+/* Rarity gem icon — centered below the 382 height boundary */
+.skin-card-gem {
+  position: absolute;
+
+  /* Gem offset manually tuned to fit within bottom flare of the border */
+  /* since bottom edge moved up 1px, we need 1px more negative offset relative to container width */
+  bottom: calc(-21 / 260 * 100%);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: 32px;
+  height: 32px;
+  pointer-events: none;
+}
+
+.skin-card-gem img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.7));
+}
+
+.skin-card-gem.transcendent img {
+  filter: drop-shadow(0 0 6px #2ec4f6);
+}
+
+.skin-card-gem.exalted img {
+  filter: drop-shadow(0 0 6px #50c878);
+}
+
+.skin-card-gem.mythic img {
+  filter: drop-shadow(0 0 6px #ee4fa0);
+}
+
+.skin-card-gem.ultimate img {
+  filter: drop-shadow(0 0 6px #ef4a60);
+}
+
+.skin-card-gem.legendary img {
+  filter: drop-shadow(0 0 6px #ff8c00);
+}
+
+.skin-card-gem.epic img {
+  filter: drop-shadow(0 0 6px #4aa8d8);
+}
+
+.skin-card-gem.standard img {
+  filter: drop-shadow(0 0 4px #6b7a8c);
+}
+
+/* Chroma badge */
+.chroma-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.chroma-badge img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+}
+
+.chroma-count {
+  position: relative;
+  z-index: 1;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* Unowned skins */
+.skin-card.unowned .skin-card-img {
+  filter: brightness(0.45) saturate(0.5);
+}
+
+.skin-card.unowned:hover .skin-card-img {
+  filter: brightness(0.55) saturate(0.6);
+}
+
+/* Lock icon for unowned */
+.lock-icon {
+  position: absolute;
+  /* Matching the gem offset calculation: since bottom edge moved up 1px */
+  bottom: calc(-21 / 260 * 100%);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: 32px;
+  height: 32px;
+  pointer-events: none;
+}
+
+.lock-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.7));
+}
+
+/* Card enter animation */
+.skin-card-enter {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: cardIn 0.3s ease forwards;
+}
+
+@keyframes cardIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
