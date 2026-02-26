@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LoL Skin Viewer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
 
   <!-- ─── CUSTOM TITLEBAR ─────────────────────────────────────────── -->
@@ -16,9 +20,9 @@
     <div class="titlebar-logo">
       <div class="logo-icon">
         <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="16,2 30,10 30,22 16,30 2,22 2,10" fill="none" stroke="#c89b3c" stroke-width="1.5"/>
-          <polygon points="16,7 25,12 25,20 16,25 7,20 7,12" fill="#c89b3c" opacity="0.15"/>
-          <path d="M16 9 L21 13 L19 20 L16 22 L13 20 L11 13 Z" fill="#c89b3c" opacity="0.7"/>
+          <polygon points="16,2 30,10 30,22 16,30 2,22 2,10" fill="none" stroke="#c89b3c" stroke-width="1.5" />
+          <polygon points="16,7 25,12 25,20 16,25 7,20 7,12" fill="#c89b3c" opacity="0.15" />
+          <path d="M16 9 L21 13 L19 20 L16 22 L13 20 L11 13 Z" fill="#c89b3c" opacity="0.7" />
         </svg>
       </div>
       <span class="logo-text">Skin Collection</span>
@@ -38,64 +42,129 @@
   <!-- ─── MAIN LAYOUT ─────────────────────────────────────────────── -->
   <div class="app-layout">
 
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <span class="sidebar-title">Champions</span>
-        <span class="champ-count" id="champ-count">—</span>
+    <!-- LEFT PANEL -->
+    <aside class="panel" id="panel">
+      <!-- Decor Frame wrapper -->
+      <div class="control-pane">
+        <!-- Background frame layers -->
+        <div class="cp-bg">
+          <div class="cp-top"></div>
+          <div class="cp-mid"></div>
+          <div class="cp-bot"></div>
+        </div>
+
+        <!-- Content inside frame -->
+        <div class="cp-content">
+          <!-- Stats ring -->
+          <div class="stats-ring-wrap">
+            <div class="stats-ring">
+              <span class="stats-ring-num" id="stats-total">0</span>
+              <span class="stats-ring-label">TOTAL SKINS<br>OWNED</span>
+            </div>
+          </div>
+
+          <!-- Rarity gems -->
+          <div class="rarity-gems" id="rarity-gems">
+            <div class="gem-item" title="Transcendent">
+              <div class="gem transcendent"><img src="assets/tier-icons/transcendent.png" alt="" draggable="false">
+              </div>
+              <span class="gem-count" id="gem-transcendent">0</span>
+            </div>
+            <div class="gem-item" title="Exalted">
+              <div class="gem exalted"><img src="assets/tier-icons/exalted.png" alt="" draggable="false"></div>
+              <span class="gem-count" id="gem-exalted">0</span>
+            </div>
+            <div class="gem-item" title="Ultimate">
+              <div class="gem ultimate"><img src="assets/tier-icons/ultimate.png" alt="" draggable="false"></div>
+              <span class="gem-count" id="gem-ultimate">0</span>
+            </div>
+            <div class="gem-item" title="Mythic">
+              <div class="gem mythic"><img src="assets/tier-icons/mythic.png" alt="" draggable="false"></div>
+              <span class="gem-count" id="gem-mythic">0</span>
+            </div>
+            <div class="gem-item" title="Legendary">
+              <div class="gem legendary"><img src="assets/tier-icons/legendary.png" alt="" draggable="false"></div>
+              <span class="gem-count" id="gem-legendary">0</span>
+            </div>
+            <div class="gem-item" title="Epic">
+              <div class="gem epic"><img src="assets/tier-icons/epic.png" alt="" draggable="false"></div>
+              <span class="gem-count" id="gem-epic">0</span>
+            </div>
+          </div>
+
+          <!-- Mini stats: legacy + chromas -->
+          <div class="mini-stats" id="mini-stats">
+            <div class="mini-stat">
+              <img class="mini-stat-icon" src="assets/tier-icons/legacy.png" alt="Legacy" draggable="false">
+              <span class="mini-stat-val" id="stat-legacy">0</span>
+            </div>
+            <div class="mini-stat">
+              <img class="mini-stat-icon" src="assets/tier-icons/chroma.png" alt="Chromas" draggable="false">
+              <span class="mini-stat-val" id="stat-chromas">0</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="sidebar-search-wrap">
-        <input
-          type="text"
-          id="champ-search"
-          class="champ-search"
-          placeholder="Search champion…"
-          autocomplete="off"
-        />
-      </div>
-      <div class="champ-list" id="champ-list">
-        <!-- Champions populated by JS -->
+
+      <hr class="panel-divider" />
+
+      <!-- Controls section -->
+      <div class="panel-controls">
+        <!-- Search -->
+        <div class="panel-search-wrap">
+          <svg class="panel-search-icon" viewBox="0 0 20 20" fill="none">
+            <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.5" />
+            <path d="M13.5 13.5 L17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+          <input type="text" id="panel-search" class="panel-search" placeholder="Search" autocomplete="off">
+        </div>
+
+        <!-- Show Unowned toggle -->
+        <label class="toggle-row">
+          <input type="checkbox" id="toggle-unowned">
+          <span class="toggle-label">Show Unowned</span>
+        </label>
+
+        <!-- Group By dropdown -->
+        <div class="dropdown-wrap" id="group-dropdown">
+          <button class="dropdown-btn"><span id="group-label">Champion</span><span
+              class="dropdown-arrow">⇅</span></button>
+          <div class="dropdown-menu" id="group-menu">
+            <button class="dropdown-item active" data-value="champion">Champion<span class="check">✓</span></button>
+            <button class="dropdown-item" data-value="tier">Tier<span class="check">✓</span></button>
+            <button class="dropdown-item" data-value="all">All Skins<span class="check">✓</span></button>
+          </div>
+        </div>
+
+        <!-- Sort By dropdown -->
+        <div class="dropdown-wrap" id="sort-dropdown">
+          <button class="dropdown-btn"><span id="sort-label">Mastery ▼</span><span
+              class="dropdown-arrow">⇅</span></button>
+          <div class="dropdown-menu" id="sort-menu">
+            <button class="dropdown-item" data-value="alpha">Alphabetical ▲<span class="check">✓</span></button>
+            <button class="dropdown-item active" data-value="mastery">Mastery ▼<span class="check">✓</span></button>
+            <button class="dropdown-item" data-value="most-owned">Most Owned<span class="check">✓</span></button>
+          </div>
+        </div>
       </div>
     </aside>
 
     <!-- MAIN CONTENT -->
     <main class="main-content">
-
       <!-- TOP BAR -->
-      <div class="topbar">
-        <div class="topbar-left">
-          <h1 class="section-title">
-            <span id="filter-label">All Skins</span>
-            <span class="skin-count-badge" id="skin-count-badge">0</span>
-          </h1>
-        </div>
-        <div class="topbar-right">
-          <div class="search-wrap">
-            <svg class="search-icon" viewBox="0 0 20 20" fill="none">
-              <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M13.5 13.5 L17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-            <input
-              type="text"
-              id="skin-search"
-              class="skin-search"
-              placeholder="Search skins…"
-              autocomplete="off"
-            />
-          </div>
-          <button class="btn-refresh" id="btn-refresh" title="Refresh">
-            <svg viewBox="0 0 20 20" fill="none">
-              <path d="M17 10A7 7 0 1 0 10 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              <polyline points="14,7 17,10 14,13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-        </div>
+      <div class="top-bar" id="top-bar">
+        <div class="section-title" id="filter-label">ALL SKINS</div>
+        <button class="btn-icon btn-refresh" id="btn-refresh" title="Refresh">
+          <svg viewBox="0 0 20 20" fill="none">
+            <path d="M17 10A7 7 0 1 0 10 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            <polyline points="14,7 17,10 14,13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+        </button>
       </div>
 
       <!-- SKIN GRID -->
-      <div class="skin-grid" id="skin-grid">
-        <!-- Cards populated by JS -->
-      </div>
+      <div class="skin-grid" id="skin-grid"></div>
 
       <!-- EMPTY STATE -->
       <div class="empty-state" id="empty-state" style="display:none">
@@ -103,7 +172,6 @@
         <h2>No skins found</h2>
         <p>Try adjusting your filters or search term</p>
       </div>
-
     </main>
   </div>
 
@@ -112,11 +180,9 @@
     <div class="loading-content">
       <div class="loading-hexagon">
         <svg viewBox="0 0 60 60">
-          <polygon points="30,3 55,17 55,43 30,57 5,43 5,17"
-            fill="none" stroke="#c89b3c" stroke-width="1.5"
+          <polygon points="30,3 55,17 55,43 30,57 5,43 5,17" fill="none" stroke="#c89b3c" stroke-width="1.5"
             stroke-dasharray="200" stroke-dashoffset="200">
-            <animate attributeName="stroke-dashoffset" from="200" to="0"
-              dur="1.5s" repeatCount="indefinite"/>
+            <animate attributeName="stroke-dashoffset" from="200" to="0" dur="1.5s" repeatCount="indefinite" />
           </polygon>
         </svg>
       </div>
@@ -130,7 +196,7 @@
       <div class="error-icon">⚠️</div>
       <h2 class="error-title" id="error-title">League Client Not Found</h2>
       <p class="error-msg" id="error-msg">Please open the League of Legends client and log in, then try again.</p>
-      <button class="btn-retry" id="btn-retry">Try Again</button>
+      <button class="btn-gold" id="btn-retry">Try Again</button>
     </div>
   </div>
 
@@ -149,4 +215,5 @@
 
   <script src="renderer.js"></script>
 </body>
+
 </html>

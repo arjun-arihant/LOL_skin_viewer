@@ -1,14 +1,41 @@
 /* ─────────────────────────────────────────────────────────────────────────
    LOL Skin Viewer — Renderer
-   Handles: data loading, champion sidebar, skin grid, search, modal
+   Panel-based layout with CDragon borders, tier gems, and grouped rendering
 ───────────────────────────────────────────────────────────────────────── */
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let allSkins = [];
 let filteredSkins = [];
-let activeChamp = null;   // null = "All"
-let skinQuery = '';
+let searchQuery = '';
+let showUnowned = false;
+let groupBy = 'champion';   // champion | tier | all
+let sortBy = 'mastery';       // alpha | mastery | most-owned
 let summoner = null;
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+const RARITY_ORDER = { transcendent: 0, exalted: 1, ultimate: 2, mythic: 3, legendary: 4, epic: 5, standard: 6 };
+
+const RARITY_ICON = {
+    transcendent: 'assets/tier-icons/transcendent.png',
+    exalted: 'assets/tier-icons/exalted.png',
+    ultimate: 'assets/tier-icons/ultimate.png',
+    mythic: 'assets/tier-icons/mythic.png',
+    legendary: 'assets/tier-icons/legendary.png',
+    epic: 'assets/tier-icons/epic.png',
+    standard: 'assets/tier-icons/standard.png',
+};
+
+const BORDER_MAP = {
+    transcendent: 'assets/borders/borders_transcendent.png',
+    exalted: 'assets/borders/borders_exalted.png',
+    ultimate: 'assets/borders/borders_ultimate.png',
+    mythic: 'assets/borders/borders_mythic.png',
+    legendary: 'assets/borders/borders_legendary.png',
+    epic: 'assets/borders/borders_epic.png',
+    standard: 'assets/borders/borders_normal.png',
+};
+
+const LOCK_ICON = 'assets/tier-icons/icon-lock.png';
 
 // ─── DOM REFS ─────────────────────────────────────────────────────────────────
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -17,13 +44,8 @@ const errorOverlay = document.getElementById('error-overlay');
 const errorTitle = document.getElementById('error-title');
 const errorMsg = document.getElementById('error-msg');
 const btnRetry = document.getElementById('btn-retry');
-const champList = document.getElementById('champ-list');
-const champCount = document.getElementById('champ-count');
-const champSearch = document.getElementById('champ-search');
 const skinGrid = document.getElementById('skin-grid');
-const skinCountBadge = document.getElementById('skin-count-badge');
 const filterLabel = document.getElementById('filter-label');
-const skinSearch = document.getElementById('skin-search');
 const emptyState = document.getElementById('empty-state');
 const summHeader = document.getElementById('summoner-header');
 const btnRefresh = document.getElementById('btn-refresh');
@@ -39,101 +61,78 @@ document.getElementById('btn-minimize').addEventListener('click', () => window.l
 document.getElementById('btn-maximize').addEventListener('click', () => window.lolAPI.maximize());
 document.getElementById('btn-close').addEventListener('click', () => window.lolAPI.close());
 
-// ─── SKIN RARITY DETECTION ────────────────────────────────────────────────────
-function getSkinRarity(skin) {
-    if (skin.isBase) return { label: 'Classic', cls: 'tag-base' };
-    const n = skin.name.toLowerCase();
-    if (/prestige/.test(n)) return { label: 'Prestige', cls: 'tag-prestige' };
-    if (/ultimate/.test(n)) return { label: 'Ultimate', cls: 'tag-ultimate' };
-    if (/mythic/.test(n)) return { label: 'Mythic', cls: 'tag-mythic' };
-    if (/legendary|lancer/.test(n)) return { label: 'Legendary', cls: 'tag-legendary' };
-    return { label: 'Epic', cls: 'tag-epic' };
-}
-
-// ─── RENDER CHAMPION SIDEBAR ──────────────────────────────────────────────────
-function buildChampionSidebar(skins) {
-    const champMap = {};
-    for (const s of skins) {
-        if (!champMap[s.championKey]) {
-            champMap[s.championKey] = {
-                name: s.championName,
-                key: s.championKey,
-                count: 0,
-                version: s.version,
-            };
-        }
-        champMap[s.championKey].count++;
+// ─── STATS PANEL ──────────────────────────────────────────────────────────────
+function updateStatsPanel(stats) {
+    document.getElementById('stats-total').textContent = stats.total;
+    for (const [rarity, count] of Object.entries(stats.byRarity)) {
+        const el = document.getElementById(`gem-${rarity}`);
+        if (el) el.textContent = count;
     }
-
-    const champs = Object.values(champMap).sort((a, b) => a.name.localeCompare(b.name));
-    champCount.textContent = champs.length;
-
-    champList.innerHTML = '';
-
-    // "All" row
-    const allRow = document.createElement('div');
-    allRow.className = 'champ-item champ-item-all' + (activeChamp === null ? ' active' : '');
-    allRow.innerHTML = `<span>All Champions</span>`;
-    allRow.addEventListener('click', () => setChampFilter(null));
-    champList.appendChild(allRow);
-
-    // Per-champion rows
-    for (const champ of champs) {
-        const row = document.createElement('div');
-        row.className = 'champ-item' + (activeChamp === champ.key ? ' active' : '');
-        row.dataset.key = champ.key;
-
-        const portraitUrl = `https://ddragon.leagueoflegends.com/cdn/${skins[0].version}/img/champion/${champ.key}.png`;
-
-        row.innerHTML = `
-      <img class="champ-portrait" src="${portraitUrl}" alt="${champ.name}"
-           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22/>'"/>
-      <div class="champ-info">
-        <div class="champ-name">${champ.name}</div>
-        <div class="champ-skin-num">${champ.count} skin${champ.count !== 1 ? 's' : ''}</div>
-      </div>
-    `;
-        row.addEventListener('click', () => setChampFilter(champ.key));
-        champList.appendChild(row);
-    }
-}
-
-// ─── CHAMPION FILTER ──────────────────────────────────────────────────────────
-function setChampFilter(champKey) {
-    activeChamp = champKey;
-
-    // Update sidebar active states
-    document.querySelectorAll('.champ-item').forEach((el) => el.classList.remove('active'));
-    if (champKey === null) {
-        document.querySelector('.champ-item-all')?.classList.add('active');
-        filterLabel.textContent = 'All Skins';
-    } else {
-        const champ = allSkins.find((s) => s.championKey === champKey);
-        if (champ) filterLabel.textContent = champ.championName;
-        document.querySelector(`.champ-item[data-key="${champKey}"]`)?.classList.add('active');
-    }
-
-    applyFilters();
+    document.getElementById('stat-legacy').textContent = stats.legacy;
+    document.getElementById('stat-chromas').textContent = stats.ownedChromas;
 }
 
 // ─── FILTER & RENDER ─────────────────────────────────────────────────────────
 function applyFilters() {
-    filteredSkins = allSkins.filter((s) => {
-        const matchChamp = activeChamp === null || s.championKey === activeChamp;
-        const q = skinQuery.toLowerCase();
-        const matchSearch =
-            !q ||
-            s.name.toLowerCase().includes(q) ||
-            s.championName.toLowerCase().includes(q);
-        return matchChamp && matchSearch;
+    const q = searchQuery.toLowerCase();
+    filteredSkins = allSkins.filter(s => {
+        if (!showUnowned && !s.owned) return false;
+        if (q && !s.name.toLowerCase().includes(q) && !s.championName.toLowerCase().includes(q)) return false;
+        return true;
     });
-
     renderGrid(filteredSkins);
+}
+
+function getSortedGroups(skins) {
+    if (groupBy === 'all') {
+        return [{ key: 'all', label: 'ALL SKINS', skins }];
+    }
+
+    const groups = {};
+    for (const s of skins) {
+        let key, label;
+        if (groupBy === 'champion') {
+            key = s.championKey;
+            label = s.championName;
+        } else if (groupBy === 'tier') {
+            key = s.rarity;
+            label = s.rarity.charAt(0).toUpperCase() + s.rarity.slice(1);
+        } else {
+            key = 'all';
+            label = 'All Skins';
+        }
+        if (!groups[key]) groups[key] = { key, label, skins: [], owned: 0, total: 0, mastery: 0 };
+        groups[key].skins.push(s);
+        groups[key].total++;
+        if (s.owned) groups[key].owned++;
+        if (s.mastery) groups[key].mastery = Math.max(groups[key].mastery, s.mastery.points || 0);
+    }
+
+    let sorted = Object.values(groups);
+
+    if (groupBy === 'tier') {
+        sorted.sort((a, b) => (RARITY_ORDER[a.key] ?? 99) - (RARITY_ORDER[b.key] ?? 99));
+    } else if (sortBy === 'mastery') {
+        sorted.sort((a, b) => b.mastery - a.mastery);
+    } else if (sortBy === 'most-owned') {
+        sorted.sort((a, b) => b.owned - a.owned);
+    } else {
+        sorted.sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    // Sort skins within each group: owned first, then by skinNum
+    for (const g of sorted) {
+        g.skins.sort((a, b) => {
+            if (a.owned !== b.owned) return a.owned ? -1 : 1;
+            return a.skinNum - b.skinNum;
+        });
+    }
+
+    return sorted;
 }
 
 function renderGrid(skins) {
     skinGrid.innerHTML = '';
-    skinCountBadge.textContent = skins.length;
 
     if (skins.length === 0) {
         emptyState.style.display = 'block';
@@ -141,41 +140,95 @@ function renderGrid(skins) {
     }
     emptyState.style.display = 'none';
 
-    for (const skin of skins) {
-        skinGrid.appendChild(createSkinCard(skin));
+    const groups = getSortedGroups(skins);
+
+    for (const group of groups) {
+        // Group header
+        if (groups.length > 1 || groupBy !== 'all') {
+            const header = document.createElement('div');
+            header.className = 'group-header';
+            header.innerHTML = `
+                <span class="group-header-name">${group.label.toUpperCase()}</span>
+                <span class="group-header-count">${group.owned}/${group.total}</span>
+                <span class="group-header-line"></span>
+            `;
+            skinGrid.appendChild(header);
+        }
+
+        // Cards
+        for (const skin of group.skins) {
+            skinGrid.appendChild(createSkinCard(skin));
+        }
     }
 }
 
 // ─── SKIN CARD ────────────────────────────────────────────────────────────────
 function createSkinCard(skin) {
     const card = document.createElement('div');
-    card.className = 'skin-card';
+    card.className = `skin-card${!skin.owned ? ' unowned' : ''}`;
+    card.tabIndex = 0;
 
-    const rarity = getSkinRarity(skin);
-
-    // Placeholder img that loads asynchronously
+    // Splash image
     const img = document.createElement('img');
     img.className = 'skin-card-img loading';
     img.alt = skin.name;
     img.loading = 'lazy';
-
-    // Use tile URL for grid (smaller), splash for modal
     img.src = skin.tileUrl;
     img.onload = () => img.classList.remove('loading');
     img.onerror = () => {
         img.classList.remove('loading');
-        img.src = skin.splashUrl; // fallback to full splash
+        img.src = skin.splashUrl;
         img.onerror = () => (img.style.display = 'none');
     };
+    card.appendChild(img);
 
-    card.innerHTML = `
-    <div class="skin-card-tag ${rarity.cls}">${rarity.label}</div>
-    <div class="skin-card-overlay">
-      <div class="skin-card-champ">${skin.championName}</div>
-      <div class="skin-card-name">${skin.name}</div>
-    </div>
-  `;
-    card.insertBefore(img, card.firstChild);
+    // CDragon border overlay
+    const borderSrc = BORDER_MAP[skin.rarity] || BORDER_MAP.standard;
+    const borderImg = document.createElement('img');
+    borderImg.className = 'skin-card-border';
+    borderImg.src = borderSrc;
+    borderImg.alt = '';
+    borderImg.draggable = false;
+    card.appendChild(borderImg);
+
+    // Name overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'skin-card-overlay';
+    overlay.innerHTML = `<div class="skin-card-name">${skin.name}</div>`;
+    card.appendChild(overlay);
+
+    if (skin.owned) {
+        // Rarity gem (for owned non-base skins)
+        if (!skin.isBase) {
+            const iconPath = RARITY_ICON[skin.rarity] || RARITY_ICON.epic;
+            const gem = document.createElement('div');
+            gem.className = `skin-card-gem ${skin.rarity}`;
+            const gemImg = document.createElement('img');
+            gemImg.src = iconPath;
+            gemImg.alt = skin.rarity;
+            gemImg.draggable = false;
+            gem.appendChild(gemImg);
+            card.appendChild(gem);
+        }
+
+        // Chroma badge
+        if (skin.chromas && skin.chromas.owned > 0) {
+            const badge = document.createElement('div');
+            badge.className = 'chroma-badge';
+            badge.innerHTML = `
+                <img src="assets/tier-icons/chroma.png" alt="Chromas" draggable="false">
+                <span class="chroma-count">${skin.chromas.owned}</span>
+            `;
+            badge.title = `${skin.chromas.owned} chroma${skin.chromas.owned > 1 ? 's' : ''}`;
+            card.appendChild(badge);
+        }
+    } else {
+        // Lock icon for unowned
+        const lock = document.createElement('div');
+        lock.className = 'lock-icon';
+        lock.innerHTML = `<img src="${LOCK_ICON}" alt="Unowned" draggable="false">`;
+        card.appendChild(lock);
+    }
 
     card.addEventListener('click', () => openModal(skin));
     return card;
@@ -196,12 +249,8 @@ function closeModal() {
 }
 
 modalClose.addEventListener('click', closeModal);
-modalBackdrop.addEventListener('click', (e) => {
-    if (e.target === modalBackdrop) closeModal();
-});
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
-});
+modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
 // ─── SUMMONER HEADER ──────────────────────────────────────────────────────────
 function renderSummonerHeader(sum) {
@@ -235,9 +284,7 @@ function showError(title, msg) {
     errorOverlay.style.display = 'flex';
 }
 
-function hideError() {
-    errorOverlay.style.display = 'none';
-}
+function hideError() { errorOverlay.style.display = 'none'; }
 
 // ─── MAIN LOAD ────────────────────────────────────────────────────────────────
 async function loadSkins(isRefresh = false) {
@@ -265,7 +312,7 @@ async function loadSkins(isRefresh = false) {
         allSkins = data.skins.map(s => ({ ...s, version: data.version }));
 
         renderSummonerHeader(summoner);
-        buildChampionSidebar(allSkins);
+        if (data.stats) updateStatsPanel(data.stats);
         applyFilters();
         hideLoading();
 
@@ -274,19 +321,58 @@ async function loadSkins(isRefresh = false) {
     }
 }
 
-// ─── CHAMPION SIDEBAR SEARCH ──────────────────────────────────────────────────
-champSearch.addEventListener('input', () => {
-    const q = champSearch.value.toLowerCase();
-    document.querySelectorAll('.champ-item:not(.champ-item-all)').forEach((el) => {
-        const name = el.querySelector('.champ-name')?.textContent.toLowerCase() || '';
-        el.style.display = name.includes(q) ? '' : 'none';
-    });
+// ─── PANEL SEARCH ─────────────────────────────────────────────────────────────
+document.getElementById('panel-search').addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    applyFilters();
 });
 
-// ─── SKIN SEARCH ─────────────────────────────────────────────────────────────
-skinSearch.addEventListener('input', () => {
-    skinQuery = skinSearch.value;
+// ─── SHOW UNOWNED TOGGLE ──────────────────────────────────────────────────────
+document.getElementById('toggle-unowned').addEventListener('change', (e) => {
+    showUnowned = e.target.checked;
     applyFilters();
+});
+
+// ─── DROPDOWN LOGIC ───────────────────────────────────────────────────────────
+function setupDropdown(wrapId, menuId, labelId, onChange) {
+    const wrap = document.getElementById(wrapId);
+    const menu = document.getElementById(menuId);
+    const label = document.getElementById(labelId);
+    const btn = wrap.querySelector('.dropdown-btn');
+
+    btn.addEventListener('click', () => {
+        const isOpen = menu.classList.contains('open');
+        // Close all dropdowns first
+        document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
+        if (!isOpen) menu.classList.add('open');
+    });
+
+    menu.querySelectorAll('.dropdown-item').forEach(item => {
+        item.addEventListener('click', () => {
+            menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            label.textContent = item.textContent.replace('✓', '').trim();
+            menu.classList.remove('open');
+            onChange(item.dataset.value);
+        });
+    });
+}
+
+setupDropdown('group-dropdown', 'group-menu', 'group-label', (val) => {
+    groupBy = val;
+    applyFilters();
+});
+
+setupDropdown('sort-dropdown', 'sort-menu', 'sort-label', (val) => {
+    sortBy = val;
+    applyFilters();
+});
+
+// Close dropdowns on outside click
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.dropdown-wrap')) {
+        document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
+    }
 });
 
 // ─── REFRESH ─────────────────────────────────────────────────────────────────
