@@ -1,31 +1,25 @@
 # LoL Skin Viewer
 
-A desktop application that displays your complete League of Legends skin collection — owned and unowned — styled to match the in-game client.
+A sleek, elegant desktop application built with Electron that displays your complete League of Legends skin collection (both owned and unowned) utilizing a native client-inspired dark theme.
 
 ![Electron](https://img.shields.io/badge/Electron-33-blue?logo=electron)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ## Features
 
-- **Full Skin Collection** — View every skin for every champion, with owned skins highlighted and unowned skins shown darkened with a lock icon.
-- **Stats Dashboard** — Total skins owned, breakdown by rarity tier (Mythic, Ultimate, Legendary, Epic, Standard), and chroma count.
-- **Chroma Badges** — See how many chromas you own per skin, displayed as a rainbow badge on each card.
-- **Group & Sort** — Group skins by Champion or Tier. Sort by Mastery, Most Owned, Most Complete %, or Alphabetically.
-- **Live Game Integration** — Automatically detects when you're in champ select or in-game and navigates to that champion's skins.
-- **Offline Mode** — Caches data locally so you can browse your collection even when the League client isn't running.
-- **Auto-Detection** — Finds the League client installation automatically across all drives.
+- **Full Collection View** — Browse every skin for every champion. Owned skins are vibrantly displayed, while unowned skins are styled with a dimmed lock icon overlay.
+- **Stats Dashboard** — View your total owned skins and breakdown metrics by rarity tier (Transcendent, Exalted, Ultimate, Mythic, Legendary, Epic, Standard), alongside legacy counts and total chromas.
+- **Visual Rarity & Chromas** — Each owned skin features its explicit CDragon-sourced rarity gem, CDragon border overlay, and a chroma count badge.
+- **Smart Grouping & Sorting** — Keep organized by grouping skins organically (by Champion, Tier, or All). Sort by Mastery points, Alphabetical order, or Most Owned.
+- **Instant Client Detection** — The app automatically scans your drives and processes to seamlessly detect your running League of Legends client and extract necessary API credentials.
 
-## Screenshots
+## Quick Start
+Get up and running in under a minute.
 
-> Launch the app with the League client running to see your collection.
-
-## Requirements
-
-- **Windows 10/11**
-- **Node.js** ≥ 18
-- **League of Legends** client installed (for live data)
-
-## Getting Started
+**Requirements:**
+- Windows 10/11
+- Node.js ≥ 18
+- League of Legends client (Running and logged in)
 
 ```bash
 # Clone the repo
@@ -35,48 +29,53 @@ cd LOL_skin_viewer
 # Install dependencies
 npm install
 
-# Run the app
+# Run the app locally (Make sure the League Client is open!)
 npm start
 ```
 
-The app will automatically find your League client. If it can't connect, it will show cached data or prompt you to open the client.
-
 ## How It Works
 
-1. **LCU API** — Reads the League client's `lockfile` to get local API credentials, then fetches your summoner info, skin inventory, champion mastery, and chroma ownership.
-2. **Data Dragon** — Pulls champion metadata and splash art from Riot's CDN.
-3. **Live Client Data API** — Polls `127.0.0.1:2999` during games to detect your active champion.
+1. **LCU API (League Client Update)**: The application utilizes intelligent PowerShell and WMI scripts to find your League `lockfile` across all drives. It then utilizes the extracted credentials to authenticate against the local LCU API to fetch user inventory and mastery data.
+2. **Data Dragon (DDragon)**: Pulls static champion metadata, tile splash arts, and profile images directly from Riot's global CDN.
+3. **CommunityDragon (CDragon)**: Authoritative source for skin rarity classifications, mapping unstandardized internal Riot variables into visually recognizable gems.
 
 ## Scripts
 
 | Command | Description |
 |---|---|
-| `npm start` | Launch the Electron app |
-| `npm run lint` | Run ESLint |
-| `npm run format` | Format code with Prettier |
+| `npm start` | Launch the Electron application |
+| `npm run lint` | Run ESLint rules against the codebase |
+| `npm run format` | Format code beautifully with Prettier |
 
 ## Project Structure
 
+A clean, modular layout ensuring maintainability and separation of concerns:
+
 ```
 LOL_skin_viewer/
-├── main.js          # Electron main process (LCU, caching, IPC, game poller)
-├── preload.js       # Secure IPC bridge
-├── renderer.js      # UI logic (filtering, grouping, rendering)
-├── index.html       # App layout
-├── styles.css       # LoL client-inspired dark theme
-├── package.json
-├── .eslintrc.json
-└── .prettierrc
+├── main.js          # Electron main process (LCU discovery, IPC API, data aggregation)
+├── preload.js       # Secure context bridge API
+├── renderer.js      # Frontend logic (Filtering, rendering, dropdowns, DOM)
+├── index.html       # Primary layout
+├── css/             # Modular CSS structure
+│   ├── variables.css      # Core tokens
+│   ├── layout.css         # App layout boundaries
+│   ├── titlebar.css       # Native-like header
+│   ├── sidebar.css        # Control dashboard
+│   ├── skin-card.css      # Splashes, borders, overlays
+│   └── ...           
+├── assets/          # Static CDragon overlays
+└── AGENTS.md        # Technical architecture documentation for AI agents
 ```
 
-## Privacy
+## Privacy & Security
 
-This app only communicates with:
-- **localhost** — League client API (`127.0.0.1`)
-- **Riot CDN** — `ddragon.leagueoflegends.com` (public, no auth)
+This app runs locally on your machine. It only interfaces with:
+- **localhost (`127.0.0.1`)**: Authorized League Client API
+- **Riot Games CDN**: Public image assets
 
-No data is sent to any external server. All cached data is stored locally in your system's app data directory.
+Zero personal data is sent to external or third-party servers. All parsed collections are safely cached locally within your user's AppData directory for fast offline access.
 
 ## License
 
-MIT
+MIT License.
