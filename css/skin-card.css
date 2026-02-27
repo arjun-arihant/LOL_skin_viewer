@@ -37,7 +37,7 @@
   left: calc(-2 / 260 * 100%);
 
   /* Nudge upwards by 11px */
-  top: calc(-11 / 260 * 100%);
+  top: calc(-7 / 260 * 100%);
 
   z-index: 3;
   pointer-events: none;
@@ -78,7 +78,7 @@
 /* Apply the extracted raster mask to clip the corners and top notch */
 .skin-card-img {
   position: absolute;
-  top: 0;
+  top: 0px;
   left: 0;
   width: 100%;
   height: 100%;
