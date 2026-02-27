@@ -273,6 +273,11 @@ function createSkinCard(skin) {
     card.dataset.champId = skin.championId;
     card.tabIndex = 0;
 
+    // Wrapper to apply the mask to BOTH the image and the name overlay 
+    // so the black gradient doesn't bleed out the bottom corners
+    const maskWrapper = document.createElement('div');
+    maskWrapper.className = 'skin-card-mask-wrapper';
+
     // Splash image
     const img = document.createElement('img');
     img.className = 'skin-card-img loading';
@@ -285,9 +290,17 @@ function createSkinCard(skin) {
         img.src = skin.splashUrl;
         img.onerror = () => (img.style.display = 'none');
     };
-    card.appendChild(img);
+    maskWrapper.appendChild(img);
 
-    // CDragon border overlay
+    // Name overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'skin-card-overlay';
+    overlay.innerHTML = `<div class="skin-card-name">${skin.name}</div>`;
+    maskWrapper.appendChild(overlay);
+
+    card.appendChild(maskWrapper);
+
+    // CDragon border overlay (outside mask wrapper so border flares aren't cropped)
     const borderSrc = BORDER_MAP[skin.rarity] || BORDER_MAP.standard;
     const borderImg = document.createElement('img');
     borderImg.className = 'skin-card-border';
@@ -295,12 +308,6 @@ function createSkinCard(skin) {
     borderImg.alt = '';
     borderImg.draggable = false;
     card.appendChild(borderImg);
-
-    // Name overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'skin-card-overlay';
-    overlay.innerHTML = `<div class="skin-card-name">${skin.name}</div>`;
-    card.appendChild(overlay);
 
     if (skin.owned) {
         // Rarity gem (for owned non-base skins)
