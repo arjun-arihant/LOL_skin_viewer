@@ -56,6 +56,28 @@ const modalChamp = document.getElementById('modal-champ');
 const modalName = document.getElementById('modal-name');
 const modalId = document.getElementById('modal-id');
 
+// ─── AUDIO CONTROLLER ─────────────────────────────────────────────────────────
+const AudioController = {
+    sounds: {
+        hover: new Audio('assets/sounds/sfx-uikit-grid-hover.ogg'),
+        click: new Audio('assets/sounds/sfx-uikit-grid-click.ogg'),
+        release: new Audio('assets/sounds/sfx-uikit-grid-release.ogg'),
+        search: new Audio('assets/sounds/sfx-uikit-generic-click-small.ogg'),
+        toggle: new Audio('assets/sounds/sfx-uikit-toggle-click.ogg'),
+        dropdownOpen: new Audio('assets/sounds/sfx-uikit-dropdown-open.ogg'),
+        dropdownSelect: new Audio('assets/sounds/sfx-uikit-button-pip-click.ogg'),
+    },
+    play(soundName) {
+        if (this.sounds[soundName]) {
+            this.sounds[soundName].currentTime = 0;
+            this.sounds[soundName].play().catch(() => { });
+        }
+    }
+};
+
+// Set specific volumes
+AudioController.sounds.dropdownOpen.volume = 0.1;
+
 // ─── TITLEBAR CONTROLS ────────────────────────────────────────────────────────
 document.getElementById('btn-minimize').addEventListener('click', () => window.lolAPI.minimize());
 document.getElementById('btn-maximize').addEventListener('click', () => window.lolAPI.maximize());
@@ -230,7 +252,11 @@ function createSkinCard(skin) {
         card.appendChild(lock);
     }
 
-    card.addEventListener('click', () => openModal(skin));
+    card.addEventListener('mouseenter', () => AudioController.play('hover'));
+    card.addEventListener('click', () => {
+        AudioController.play('click');
+        openModal(skin);
+    });
     return card;
 }
 
@@ -244,13 +270,14 @@ function openModal(skin) {
 }
 
 function closeModal() {
+    AudioController.play('release');
     modalBackdrop.style.display = 'none';
     modalSplash.src = '';
 }
 
 modalClose.addEventListener('click', closeModal);
 modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modalBackdrop.style.display === 'flex') closeModal(); });
 
 // ─── SUMMONER HEADER ──────────────────────────────────────────────────────────
 function renderSummonerHeader(sum) {
@@ -322,13 +349,16 @@ async function loadSkins(isRefresh = false) {
 }
 
 // ─── PANEL SEARCH ─────────────────────────────────────────────────────────────
-document.getElementById('panel-search').addEventListener('input', (e) => {
+const panelSearch = document.getElementById('panel-search');
+panelSearch.addEventListener('focus', () => AudioController.play('search'));
+panelSearch.addEventListener('input', (e) => {
     searchQuery = e.target.value;
     applyFilters();
 });
 
 // ─── SHOW UNOWNED TOGGLE ──────────────────────────────────────────────────────
 document.getElementById('toggle-unowned').addEventListener('change', (e) => {
+    AudioController.play('toggle');
     showUnowned = e.target.checked;
     applyFilters();
 });
@@ -344,11 +374,15 @@ function setupDropdown(wrapId, menuId, labelId, onChange) {
         const isOpen = menu.classList.contains('open');
         // Close all dropdowns first
         document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
-        if (!isOpen) menu.classList.add('open');
+        if (!isOpen) {
+            AudioController.play('dropdownOpen');
+            menu.classList.add('open');
+        }
     });
 
     menu.querySelectorAll('.dropdown-item').forEach(item => {
         item.addEventListener('click', () => {
+            AudioController.play('dropdownSelect');
             menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
             item.classList.add('active');
             label.textContent = item.textContent.replace('✓', '').trim();

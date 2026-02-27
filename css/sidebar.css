@@ -245,7 +245,7 @@
   width: 100%;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid #7a5c29;
-  border-radius: 4px;
+  border-radius: 0;
   color: #c99c3e;
   font-size: 16px;
   padding: 12px 14px 12px 40px;
@@ -277,7 +277,7 @@
   width: 18px;
   height: 18px;
   border: 1.5px solid #8f6f2a;
-  border-radius: 2px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.3);
   cursor: pointer;
   position: relative;
@@ -324,7 +324,7 @@
   gap: 6px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid #a48952;
-  border-radius: 4px;
+  border-radius: 0;
   color: #c2bdb3;
   font-size: 16px;
   padding: 12px 14px;
@@ -342,21 +342,32 @@
 }
 
 .dropdown-menu {
-  display: none;
+  display: flex;
+  flex-direction: column;
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(100% + 4px);
-  background: #0e1828;
-  border: 1px solid var(--border-bright);
-  border-radius: var(--radius-sm);
+  bottom: calc(100% + 4px);
+  /* Opens upwards */
+  background: #010a13;
+  border: 1px solid #a48952;
+  border-radius: 0;
   z-index: 500;
   overflow: hidden;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6);
+
+  /* Fast upward crisp animation */
+  opacity: 0;
+  transform: scaleY(0);
+  transform-origin: bottom center;
+  transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
 }
 
 .dropdown-menu.open {
-  display: block;
+  opacity: 1;
+  transform: scaleY(1);
+  pointer-events: auto;
 }
 
 .dropdown-item {
@@ -364,19 +375,27 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
+  padding: 12px 16px;
   background: transparent;
   border: none;
-  color: var(--text-secondary);
-  font-size: 14px;
+  border-bottom: 1px solid rgba(200, 155, 60, 0.15);
+  /* Separators like the reference image */
+  color: #c2bdb3;
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  font-size: 15px;
   cursor: pointer;
   text-align: left;
   transition: background var(--ease), color var(--ease);
 }
 
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
 .dropdown-item:hover {
-  background: rgba(200, 155, 60, 0.08);
-  color: var(--text-primary);
+  background: #111b2a;
+  color: var(--gold);
 }
 
 .dropdown-item.active {
@@ -384,12 +403,11 @@
 }
 
 .dropdown-item .check {
-  color: var(--gold);
-  font-size: 16px;
+  color: #c99c3e;
+  font-size: 18px;
   display: none;
 }
 
 .dropdown-item.active .check {
   display: inline;
 }
-

@@ -75,9 +75,7 @@
   mask-image: url('../assets/borders/card-mask-transcendent.png');
 }
 
-.skin-card:hover .skin-card-img {
-  transform: scale(1.04);
-}
+/* Card scales collectively, independent image scaling removed */
 
 .skin-card-img.loading {
   background: linear-gradient(90deg,
@@ -87,8 +85,25 @@
 }
 
 /* Bottom name overlay - hidden by default to match actual client */
+/* Restore it so it's visible, if the user explicitly wants names back */
 .skin-card-overlay {
-  display: none;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 30px 8px 20px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.skin-card-name {
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+  text-align: center;
 }
 
 /* (Name overlay hidden to match actual client) */
