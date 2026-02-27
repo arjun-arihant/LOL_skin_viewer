@@ -35,8 +35,8 @@
   /* Shift left by 2px (relative to 260px container) */
   left: calc(-2 / 260 * 100%);
 
-  /* Nudge upwards by 13px */
-  top: calc(-13 / 260 * 100%);
+  /* Nudge upwards by 11px */
+  top: calc(-11 / 260 * 100%);
 
   z-index: 3;
   pointer-events: none;
@@ -48,6 +48,7 @@
 }
 
 /* Skin image perfectly maps to its 264x382 bounding box parent */
+/* Apply the extracted raster mask to clip the corners and top notch */
 .skin-card-img {
   position: absolute;
   top: 0;
@@ -57,8 +58,21 @@
   object-fit: cover;
   object-position: top center;
   display: block;
+
+  /* Masking */
+  -webkit-mask-image: url('../assets/borders/card-mask.png');
+  -webkit-mask-size: 100% 100%;
+  mask-image: url('../assets/borders/card-mask.png');
+  mask-size: 100% 100%;
+
   transition: transform 0.35s ease;
   z-index: 1;
+}
+
+/* Transcendent limits have a slightly lower cut notch */
+.skin-card.transcendent .skin-card-img {
+  -webkit-mask-image: url('../assets/borders/card-mask-transcendent.png');
+  mask-image: url('../assets/borders/card-mask-transcendent.png');
 }
 
 .skin-card:hover .skin-card-img {
@@ -85,7 +99,7 @@
 
   /* Gem offset manually tuned to fit within bottom flare of the border */
   /* since bottom edge moved up 1px, we need 1px more negative offset relative to container width */
-  bottom: calc(-21 / 260 * 100%);
+  bottom: calc(-14 / 260 * 100%);
   left: 50%;
   transform: translateX(-50%);
   z-index: 5;
@@ -119,6 +133,10 @@
 
 .skin-card-gem.legendary img {
   filter: drop-shadow(0 0 6px #ff8c00);
+}
+
+.skin-card-gem.epic {
+  bottom: calc(-10 / 260 * 100%);
 }
 
 .skin-card-gem.epic img {
@@ -202,4 +220,3 @@
     transform: translateY(0);
   }
 }
-
