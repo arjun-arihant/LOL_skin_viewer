@@ -215,6 +215,10 @@
 
 /* Toggle spacing */
 .panel-controls .toggle-row {
+  margin-bottom: 10px;
+}
+
+.panel-controls .toggle-row:last-of-type {
   margin-bottom: 50px;
 }
 

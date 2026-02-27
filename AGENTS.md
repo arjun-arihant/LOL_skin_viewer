@@ -104,7 +104,8 @@ The app requires the League client to be running properly and utilizes a 4-tier 
 2. Hit `/lol-summoner/v1/current-summoner` (Summoner identification).
 3. Hit `/lol-champions/v1/inventories/{id}/skins-minimal` (Master inventory array).
 4. Hit `/lol-collections/v1/inventories/{id}/champion-mastery` (Data needed for sorting algorithms).
-5. Map raw IDs mathematically (ex: `champId = Math.floor(skin.id / 1000)`) against fetched DDragon lists.
+5. Hit `/lol-champions/v1/inventories/{id}/champions/{champId}/skins` dynamically in chunks of 15 to map individual Chroma arrays without triggering the LCU backend Rate Limiter.
+6. Map raw IDs mathematically (ex: `champId = Math.floor(skin.id / 1000)`) against fetched DDragon arrays, assigning DDragon's official `/loadingUrl/` slices instead of `/tiles/` to generate seamless vertical card framing.
 
 ---
 
@@ -113,8 +114,8 @@ The app requires the League client to be running properly and utilizes a 4-tier 
 1. **Security Constraints**: 
    - `contextIsolation: true` is strictly enforced.
    - `rejectUnauthorized: false` remains mandatory only for internal localhost LCU calls due to Riot's self-signed certificating.
-   - External CDN requests remain completely sandboxed.
+   - External CDN requests remain completely sandboxed. (e.g. Chrome SSL `-202` strict enforcement mandates all `img src` calls bypass local LCU servers and hit CDragon global nodes instead).
 2. **QA Checkpoints**:
    - Ensure the app falls back elegantly when DDragon or CDragon APIs expire (via `.catch{}`).
    - Verify unowned items correctly dim and overlay via CSS logic instead of JS logic.
-   - Inspect chroma counts mathematically rendering on top of the `.chroma-badge`.
+   - Inspect chroma counts mathematically rendering on top of the `.chroma-badge`, ensuring they only sum items strictly tagged with `c.ownership.owned === true`.

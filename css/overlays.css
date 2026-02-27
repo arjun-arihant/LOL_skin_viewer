@@ -207,3 +207,80 @@
   color: var(--text-muted);
 }
 
+/* ═══ CHROMA GALLERY MODAL ═══════════════════════════════════════════════════ */
+.chroma-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.chroma-modal {
+  position: relative;
+  width: 90%;
+  max-width: 1000px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: #060a12;
+  border: 1px solid var(--border-bright);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.9), var(--shadow-glow);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+.chroma-header {
+  padding: 24px;
+  font-family: 'Cinzel', serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  letter-spacing: 0.15em;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #0a0e16 0%, #060a12 100%);
+}
+
+.chroma-grid {
+  padding: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.chroma-item {
+  position: relative;
+  aspect-ratio: 200 / 262;
+  /* Approximate League chroma ratio */
+  background: url('../assets/bg-chroma-card.jpg') center/cover no-repeat;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chroma-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 12px rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.chroma-item.locked {
+  filter: brightness(0.4) grayscale(0.8);
+}
+
+.chroma-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}

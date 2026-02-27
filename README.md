@@ -8,8 +8,9 @@ A sleek, elegant desktop application built with Electron that displays your comp
 ## Features
 
 - **Full Collection View** — Browse every skin for every champion. Owned skins are vibrantly displayed, while unowned skins are styled with a dimmed lock icon overlay.
-- **Stats Dashboard** — View your total owned skins and breakdown metrics by rarity tier (Transcendent, Exalted, Ultimate, Mythic, Legendary, Epic, Standard), alongside legacy counts and total chromas.
-- **Visual Rarity & Chromas** — Each owned skin features its explicit CDragon-sourced rarity gem, CDragon border overlay, and a chroma count badge.
+- **Stats Dashboard** — View your total owned skins and breakdown metrics by rarity tier (Transcendent, Exalted, Ultimate, Mythic, Legendary, Epic, Standard), alongside precise legacy counts and total chromas.
+- **Visual Rarity & Chromas** — Each owned skin features its explicit CDragon-sourced rarity gem, CDragon border overlay, and a highly-interactive chroma count badge that launches a dedicated **Chroma Gallery Modal** showcasing unowned and owned variations dynamically loaded from Riot's CDN.
+- **Official Portrait Framing** — Splash arts utilize the official Data Dragon `loadingUrl` slices to perfectly replicate the zoomed-out vertical bounding boxes native to the League client UI.
 - **Smart Grouping & Sorting** — Keep organized by grouping skins organically (by Champion, Tier, or All). Sort by Mastery points, Alphabetical order, or Most Owned.
 - **Instant Client Detection** — The app automatically scans your drives and processes to seamlessly detect your running League of Legends client and extract necessary API credentials.
 
@@ -37,7 +38,7 @@ npm start
 
 1. **LCU API (League Client Update)**: The application utilizes intelligent PowerShell and WMI scripts to find your League `lockfile` across all drives. It then utilizes the extracted credentials to authenticate against the local LCU API to fetch user inventory and mastery data.
 2. **Data Dragon (DDragon)**: Pulls static champion metadata, tile splash arts, and profile images directly from Riot's global CDN.
-3. **CommunityDragon (CDragon)**: Authoritative source for skin rarity classifications, mapping unstandardized internal Riot variables into visually recognizable gems.
+3. **CommunityDragon (CDragon)**: Authoritative source for skin rarity classifications and legacy identifiers, mapping unstandardized internal Riot variables into visually recognizable gems and strictly tracking Vault status.
 
 ## Scripts
 

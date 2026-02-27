@@ -29,7 +29,7 @@
   --radius-md: 10px;
   --radius-lg: 16px;
   --panel-w: 370px;
-  --titlebar-h: 100px;
+  --titlebar-h: 120px;
   --ease: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --r-mythic: #ee4fa0;
   --r-ultimate: #ef4a60;
@@ -65,7 +65,7 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #785a28;
   border-radius: 4px;
-  min-height: 120px;
+  min-height: 80px;
 }
 
 ::-webkit-scrollbar-thumb:hover {

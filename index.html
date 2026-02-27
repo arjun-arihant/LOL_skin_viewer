@@ -40,9 +40,22 @@
     </div>
 
     <div class="titlebar-controls">
-      <button class="win-btn" id="btn-minimize" title="Minimize">&#x2013;</button>
-      <button class="win-btn" id="btn-maximize" title="Maximize">&#x25A1;</button>
-      <button class="win-btn close" id="btn-close" title="Close">&#x2715;</button>
+      <button class="control-btn" id="btn-minimize" title="Minimize">
+        <svg viewBox="0 0 10 1" stroke="currentColor">
+          <line x1="0" y1="0.5" x2="10" y2="0.5" />
+        </svg>
+      </button>
+      <button class="control-btn" id="btn-maximize" title="Maximize">
+        <svg viewBox="0 0 10 10" stroke="currentColor" fill="none">
+          <rect x="0.5" y="0.5" width="9" height="9" />
+        </svg>
+      </button>
+      <button class="control-btn close" id="btn-close" title="Close">
+        <svg viewBox="0 0 10 10" stroke="currentColor">
+          <line x1="1" y1="1" x2="9" y2="9" />
+          <line x1="9" y1="1" x2="1" y2="9" />
+        </svg>
+      </button>
     </div>
   </header>
 
@@ -132,6 +145,12 @@
           <span class="toggle-label">Show Unowned</span>
         </label>
 
+        <!-- Show Base toggle -->
+        <label class="toggle-row">
+          <input type="checkbox" id="toggle-base" checked>
+          <span class="toggle-label">Show Base Skins</span>
+        </label>
+
         <!-- Group By dropdown -->
         <div class="dropdown-wrap" id="group-dropdown">
           <button class="dropdown-btn"><span id="group-label">Champion</span><span
@@ -210,6 +229,17 @@
         <p class="modal-champ" id="modal-champ"></p>
         <h2 class="modal-name" id="modal-name"></h2>
         <p class="modal-id" id="modal-id"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── CHROMA GALLERY MODAL ────────────────────────────────────── -->
+  <div class="chroma-backdrop" id="chroma-backdrop" style="display:none">
+    <div class="chroma-modal" id="chroma-modal">
+      <button class="modal-close" id="chroma-close">&#x2715;</button>
+      <div class="chroma-header">CHROMAS</div>
+      <div class="chroma-grid" id="chroma-grid">
+        <!-- Chromas injected dynamically via JS -->
       </div>
     </div>
   </div>

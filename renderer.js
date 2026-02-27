@@ -8,9 +8,12 @@ let allSkins = [];
 let filteredSkins = [];
 let searchQuery = '';
 let showUnowned = false;
+let showBase = true;
 let groupBy = 'champion';   // champion | tier | all
 let sortBy = 'mastery';       // alpha | mastery | most-owned
 let summoner = null;
+let isAnimatingStats = false;
+let LCU_PORT = null;
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const RARITY_ORDER = { transcendent: 0, exalted: 1, ultimate: 2, mythic: 3, legendary: 4, epic: 5, standard: 6 };
@@ -109,7 +112,14 @@ function countUp(el, endVal) {
 
 function updateStatsPanel(stats) {
     const totalEl = document.getElementById('stats-total');
-    countUp(totalEl, stats.total);
+
+    // Animate stats counting - Only once per session
+    if (!isAnimatingStats) {
+        countUp(totalEl, stats.total);
+        isAnimatingStats = true;
+    } else {
+        totalEl.textContent = stats.total; // Direct push if already animated
+    }
 
     for (const [rarity, count] of Object.entries(stats.byRarity)) {
         const el = document.getElementById(`gem-${rarity}`);
@@ -124,6 +134,7 @@ function applyFilters() {
     const q = searchQuery.toLowerCase();
     filteredSkins = allSkins.filter(s => {
         if (!showUnowned && !s.owned) return false;
+        if (!showBase && s.isBase) return false;
         if (q && !s.name.toLowerCase().includes(q) && !s.championName.toLowerCase().includes(q)) return false;
         return true;
     });
@@ -179,10 +190,12 @@ function getSortedGroups(skins) {
         sorted.sort((a, b) => a.label.localeCompare(b.label));
     }
 
-    // Sort skins within each group: owned first, then by skinNum
+    // Sort skins within each group: owned first, then by skinName alphabetical, then by skinNum
     for (const g of sorted) {
         g.skins.sort((a, b) => {
             if (a.owned !== b.owned) return a.owned ? -1 : 1;
+            const nameCompare = a.name.localeCompare(b.name);
+            if (nameCompare !== 0) return nameCompare;
             return a.skinNum - b.skinNum;
         });
     }
@@ -221,10 +234,43 @@ function renderGrid(skins) {
     }
 }
 
+function scrollToChampion(champId) {
+    if (!filteredSkins || filteredSkins.length === 0) return;
+
+    // Attempt to find the first card or header belonging to the champ
+    const targetCard = Array.from(document.querySelectorAll('.skin-card')).find(card => {
+        return card.dataset.champId === String(champId);
+    });
+
+    if (targetCard) {
+        // Find the group header if grouping by champion
+        let targetElement = targetCard;
+        if (groupBy === 'champion') {
+            let prev = targetCard.previousElementSibling;
+            while (prev && !prev.classList.contains('group-header')) {
+                prev = prev.previousElementSibling;
+                if (!prev) break;
+            }
+            if (prev) targetElement = prev;
+        }
+
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Add a subtle highlight flash
+        targetCard.style.outline = '2px solid var(--gold)';
+        targetCard.style.outlineOffset = '2px';
+        setTimeout(() => {
+            targetCard.style.outline = '';
+            targetCard.style.outlineOffset = '';
+        }, 1500);
+    }
+}
+
 // ─── SKIN CARD ────────────────────────────────────────────────────────────────
 function createSkinCard(skin) {
     const card = document.createElement('div');
     card.className = `skin-card${!skin.owned ? ' unowned' : ''}`;
+    card.dataset.champId = skin.championId;
     card.tabIndex = 0;
 
     // Splash image
@@ -232,7 +278,7 @@ function createSkinCard(skin) {
     img.className = 'skin-card-img loading';
     img.alt = skin.name;
     img.loading = 'lazy';
-    img.src = skin.tileUrl;
+    img.src = skin.loadingUrl;
     img.onload = () => img.classList.remove('loading');
     img.onerror = () => {
         img.classList.remove('loading');
@@ -279,6 +325,13 @@ function createSkinCard(skin) {
                 <span class="chroma-count">${skin.chromas.owned}</span>
             `;
             badge.title = `${skin.chromas.owned} chroma${skin.chromas.owned > 1 ? 's' : ''}`;
+
+            // Chroma Gallery Click Hook
+            badge.addEventListener('click', (e) => {
+                e.stopPropagation(); // prevent modal opening
+                AudioController.play('click');
+                openChromaModal(skin);
+            });
             card.appendChild(badge);
         }
     } else {
@@ -290,7 +343,10 @@ function createSkinCard(skin) {
     }
 
     card.addEventListener('mouseenter', () => AudioController.play('hover'));
-    card.addEventListener('click', () => {
+    card.addEventListener('click', (e) => {
+        // Prevent opening standard modal if interacting with Chroma Badge
+        if (e.target.closest('.chroma-badge')) return;
+
         AudioController.play('click');
         openModal(skin);
     });
@@ -298,6 +354,10 @@ function createSkinCard(skin) {
 }
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
+const chromaBackdrop = document.getElementById('chroma-backdrop');
+const chromaClose = document.getElementById('chroma-close');
+const chromaGrid = document.getElementById('chroma-grid');
+
 function openModal(skin) {
     modalChamp.textContent = skin.championName;
     modalName.textContent = skin.name;
@@ -306,15 +366,55 @@ function openModal(skin) {
     modalBackdrop.style.display = 'flex';
 }
 
+function openChromaModal(skin) {
+    if (!skin.chromas || !skin.chromas.list) return;
+
+    chromaGrid.innerHTML = '';
+
+    // Sort chromas: owned first, then by ID
+    const sortedChromas = [...skin.chromas.list].sort((a, b) => {
+        const aOwned = a.ownership?.owned === true || a.owned === true || a.isOwned === true || a.unlocked === true;
+        const bOwned = b.ownership?.owned === true || b.owned === true || b.isOwned === true || b.unlocked === true;
+        if (aOwned === bOwned) return a.id - b.id;
+        return aOwned ? -1 : 1;
+    });
+
+    sortedChromas.forEach(c => {
+        // Obey Show Unowned Toggle
+        const isOwned = c.ownership?.owned === true || c.owned === true || c.isOwned === true || c.unlocked === true;
+        if (!showUnowned && !isOwned) return;
+
+        // LCU port 127.0.0.1 requires SSL auth headers which img src cannot provide. Force CDragon plugin images.
+        const pathUrl = `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-chroma-images/${skin.championId}/${c.id}.png`;
+
+        const cNode = document.createElement('div');
+        cNode.className = `chroma-item ${isOwned ? '' : 'locked'}`;
+        cNode.title = c.name || `Chroma ID: ${c.id}`;
+
+        const img = document.createElement('img');
+        img.className = 'chroma-img';
+        img.src = pathUrl;
+        img.draggable = false;
+
+        cNode.appendChild(img);
+        chromaGrid.appendChild(cNode);
+    });
+
+    chromaBackdrop.style.display = 'flex';
+}
+
 function closeModal() {
     AudioController.play('release');
     modalBackdrop.style.display = 'none';
+    chromaBackdrop.style.display = 'none';
     modalSplash.src = '';
 }
 
 modalClose.addEventListener('click', closeModal);
+chromaClose.addEventListener('click', closeModal);
 modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modalBackdrop.style.display === 'flex') closeModal(); });
+chromaBackdrop.addEventListener('click', (e) => { if (e.target === chromaBackdrop) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
 // ─── SUMMONER HEADER ──────────────────────────────────────────────────────────
 function renderSummonerHeader(sum, status = 'connected') {
@@ -332,13 +432,13 @@ function renderSummonerHeader(sum, status = 'connected') {
     summHeader.innerHTML = `
     <div class="summoner-profile">
       <div class="summoner-avatar-wrapper">
-        <img class="summoner-avatar" src="${sum.profileIconUrl}" alt="icon" onerror="this.style.display='none'"/>
+        <img class="summoner-avatar" src="${sum.profileIconUrl}" alt="icon" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDBwJSIgaGVpZ2h0PSIxMDBwJSI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iIzAxMGExMyIvPjwvc3ZnPg=='"/>
         <div class="summoner-level-wrapper">
           <div class="summoner-level"><span>${sum.summonerLevel}</span></div>
         </div>
       </div>
       <div class="summoner-details">
-        <div class="summoner-name">${sum.displayName}</div>
+        <div class="summoner-name">${sum.gameName || sum.displayName || 'Summoner'}</div>
         <div class="summoner-status">
           <span class="status-dot" style="background: ${statusColor}"></span>
           <span class="status-text" style="color: ${statusColor}">${statusText}</span>
@@ -381,6 +481,7 @@ async function loadSkins(isRefresh = false) {
             const data = cached.data;
             summoner = data.summoner;
             allSkins = data.skins;
+            LCU_PORT = data.lcuPort;
             renderSummonerHeader(summoner, 'connecting'); // Render as connecting
             if (data.stats) updateStatsPanel(data.stats);
             applyFilters();
@@ -416,6 +517,7 @@ async function loadSkins(isRefresh = false) {
 
         const data = res.data;
         summoner = data.summoner;
+        LCU_PORT = data.lcuPort;
         allSkins = data.skins.map(s => ({ ...s, version: data.version }));
 
         renderSummonerHeader(summoner, 'connected'); // Connected
@@ -442,6 +544,12 @@ panelSearch.addEventListener('input', (e) => {
 document.getElementById('toggle-unowned').addEventListener('change', (e) => {
     AudioController.play('toggle');
     showUnowned = e.target.checked;
+    applyFilters();
+});
+
+document.getElementById('toggle-base').addEventListener('change', (e) => {
+    AudioController.play('toggle');
+    showBase = e.target.checked;
     applyFilters();
 });
 
@@ -504,3 +612,11 @@ btnRetry.addEventListener('click', () => {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 loadSkins(false);
+
+if (window.lolAPI.onLiveGameEvent) {
+    window.lolAPI.onLiveGameEvent((event) => {
+        if (event.type === 'champ-hover' && event.championId) {
+            scrollToChampion(event.championId);
+        }
+    });
+}

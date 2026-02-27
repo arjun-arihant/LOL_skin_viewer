@@ -7,4 +7,5 @@ contextBridge.exposeInMainWorld('lolAPI', {
     minimize: () => ipcRenderer.send('window-minimize'),
     maximize: () => ipcRenderer.send('window-maximize'),
     close: () => ipcRenderer.send('window-close'),
+    onLiveGameEvent: (callback) => ipcRenderer.on('live-game-event', (event, data) => callback(data)),
 });

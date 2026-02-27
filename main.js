@@ -117,13 +117,18 @@ function findLockfileViaPowerShell() {
   return null;
 }
 
+let lastLockfileLogged = null;
+
 function getLCUCredentials() {
   // 1. Try all known lockfile paths (multi-drive)
   for (const p of buildDefaultPaths()) {
     if (fs.existsSync(p)) {
       const creds = parseLockfile(p);
       if (creds) {
-        console.log('[LCU] Found lockfile at:', p);
+        if (lastLockfileLogged !== p) {
+          console.log('[LCU] Found lockfile at:', p);
+          lastLockfileLogged = p;
+        }
         return creds;
       }
     }
@@ -236,9 +241,12 @@ async function fetchCDRarityMap() {
     };
     for (const [skinId, skinData] of Object.entries(raw)) {
       const r = (skinData.rarity || 'kNoRarity').toLowerCase();
-      cdRarityMap[skinId] = rarityMap[r] || 'standard';
+      cdRarityMap[skinId] = {
+        rarity: rarityMap[r] || 'standard',
+        isLegacy: !!skinData.isLegacy
+      };
     }
-    console.log(`[CDragon] Loaded rarity for ${Object.keys(cdRarityMap).length} skins`);
+    console.log(`[CDragon] Loaded data for ${Object.keys(cdRarityMap).length} skins`);
   } catch (e) {
     console.error('[CDragon] Failed to fetch rarity data:', e.message);
     cdRarityMap = {};
@@ -250,8 +258,8 @@ function detectRarity(skin, cdMap) {
   const id = String(skin.id);
 
   // 1. CommunityDragon authoritative data (always trust if available)
-  if (cdMap && cdMap[id]) {
-    return cdMap[id];
+  if (cdMap && cdMap[id] && cdMap[id].rarity) {
+    return cdMap[id].rarity;
   }
 
   // 2. LCU rarityGemPath
@@ -317,31 +325,38 @@ async function buildOwnedSkins(creds) {
     }
   } catch { }
 
-  // Fetch chromas per champion
+  // Fetch chromas per champion (Chunked properly to avoid LCU Rate Limit drop)
   const chromaMap = {};
-  const chromaPromises = Object.keys(skinsByChamp).map(async champId => {
-    try {
-      const skins = await lcuRequest(creds.port, creds.password,
-        `/lol-champions/v1/inventories/${summonerId}/champions/${champId}/skins`);
-      if (Array.isArray(skins)) {
-        for (const sk of skins) {
-          const chromaList = sk.chromas || sk.childSkins || [];
-          if (chromaList.length > 0) {
-            const ownedChromas = chromaList.filter(c =>
-              c.ownership?.owned || c.owned || c.unlocked || false
-            );
-            if (ownedChromas.length > 0) {
-              chromaMap[sk.id] = { total: chromaList.length, owned: ownedChromas.length };
+  const champIds = Object.keys(skinsByChamp);
+
+  for (let i = 0; i < champIds.length; i += 15) {
+    const chunk = champIds.slice(i, i + 15);
+    await Promise.all(chunk.map(async champId => {
+      try {
+        const skins = await lcuRequest(creds.port, creds.password,
+          `/lol-champions/v1/inventories/${summonerId}/champions/${champId}/skins`);
+        if (Array.isArray(skins)) {
+          for (const sk of skins) {
+            const chromaList = sk.chromas || sk.childSkins || [];
+            if (chromaList.length > 0) {
+              const ownedChromas = chromaList.filter(c =>
+                c.ownership?.owned === true || c.owned === true || c.isOwned === true || c.unlocked === true
+              );
+              const finalChromas = ownedChromas;
+              if (finalChromas.length > 0) {
+                chromaMap[sk.id] = { total: chromaList.length, owned: finalChromas.length, list: chromaList };
+              } else if (ownedChromas.length > 0) {
+                chromaMap[sk.id] = { total: chromaList.length, owned: ownedChromas.length, list: chromaList };
+              } else {
+                chromaMap[sk.id] = { total: chromaList.length, owned: 0, list: chromaList };
+              }
             }
           }
         }
-      }
-    } catch { }
-  });
-
-  for (let i = 0; i < chromaPromises.length; i += 20) {
-    await Promise.all(chromaPromises.slice(i, i + 20));
+      } catch { }
+    }));
   }
+
   console.log(`[LCU] Chromas found for ${Object.keys(chromaMap).length} skins`);
 
   // Fetch CommunityDragon rarity data
@@ -366,12 +381,12 @@ async function buildOwnedSkins(creds) {
       skinNum,
       owned,
       isBase: skinNum === 0,
-      isLegacy: !!(skin.isVaultSkin),
+      isLegacy: (cdMap[skin.id] && cdMap[skin.id].isLegacy) || false,
       rarity,
       chromas,
       mastery,
       splashUrl: `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champ.id}_${skinNum}.jpg`,
-      tileUrl: `https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/${champ.id}_${skinNum}.jpg`,
+      loadingUrl: `https://ddragon.leagueoflegends.com/cdn/img/champion/loading/${champ.id}_${skinNum}.jpg`,
       skinLines: skin.skinLines || [],
     };
   });
@@ -400,6 +415,7 @@ async function buildOwnedSkins(creds) {
   return {
     summoner: {
       displayName: summoner.displayName,
+      gameName: summoner.gameName,
       summonerId,
       summonerLevel: summoner.summonerLevel,
       profileIconId: summoner.profileIconId,
@@ -409,6 +425,7 @@ async function buildOwnedSkins(creds) {
     stats,
     total: ownedSkins.length,
     version,
+    lcuPort: creds.port,
   };
 }
 
@@ -433,6 +450,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
+  startChampSelectPolling();
 
   // Custom titlebar controls
   ipcMain.on('window-minimize', () => mainWindow.minimize());
@@ -505,3 +523,34 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
+
+// ─── LIVE GAME POLLING ────────────────────────────────────────────────────────
+let pollingInterval = null;
+let lastHoveredChampId = null;
+
+function startChampSelectPolling() {
+  if (pollingInterval) return;
+  pollingInterval = setInterval(async () => {
+    if (!mainWindow) return;
+    const creds = getLCUCredentials();
+    if (!creds) return;
+
+    try {
+      const session = await lcuRequest(creds.port, creds.password, '/lol-champ-select/v1/session');
+      if (session && session.localPlayerCellId !== undefined) {
+        const localPlayer = session.myTeam.find(p => p.cellId === session.localPlayerCellId);
+        if (localPlayer) {
+          const champId = localPlayer.championId || localPlayer.championPickIntent;
+          if (champId && champId !== lastHoveredChampId && champId !== 0) {
+            lastHoveredChampId = champId;
+            mainWindow.webContents.send('live-game-event', { type: 'champ-hover', championId: champId });
+          }
+        }
+      } else {
+        lastHoveredChampId = null;
+      }
+    } catch (e) {
+      lastHoveredChampId = null;
+    }
+  }, 2000);
+}
