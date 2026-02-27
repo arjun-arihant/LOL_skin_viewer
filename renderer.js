@@ -84,8 +84,33 @@ document.getElementById('btn-maximize').addEventListener('click', () => window.l
 document.getElementById('btn-close').addEventListener('click', () => window.lolAPI.close());
 
 // ─── STATS PANEL ──────────────────────────────────────────────────────────────
+function countUp(el, endVal) {
+    const duration = 1000; // Speed of the animation (ms). Adjust this value to make it faster/slower
+    const startTime = performance.now();
+    const isDoubleFormat = endVal >= 10;
+
+    const step = (timestamp) => {
+        const progress = Math.min((timestamp - startTime) / duration, 1);
+        let current = Math.floor(progress * endVal);
+
+        let text = current.toString();
+        // If final number is double digit, single digits should be padded like "05"
+        if (isDoubleFormat && current < 10) text = '0' + text;
+        // If final number is triple digit, handle padding
+        if (endVal >= 100 && current < 100 && current >= 10) text = '0' + text;
+        if (endVal >= 100 && current < 10) text = '00' + text;
+
+        el.textContent = text;
+        if (progress < 1) requestAnimationFrame(step);
+        else el.textContent = endVal;
+    };
+    requestAnimationFrame(step);
+}
+
 function updateStatsPanel(stats) {
-    document.getElementById('stats-total').textContent = stats.total;
+    const totalEl = document.getElementById('stats-total');
+    countUp(totalEl, stats.total);
+
     for (const [rarity, count] of Object.entries(stats.byRarity)) {
         const el = document.getElementById(`gem-${rarity}`);
         if (el) el.textContent = count;
@@ -110,6 +135,15 @@ function getSortedGroups(skins) {
         return [{ key: 'all', label: 'ALL SKINS', skins }];
     }
 
+    // Pre-calculate the true absolute totals for every group bypassing the filters
+    const trueCounts = {};
+    for (const s of allSkins) {
+        const key = groupBy === 'champion' ? s.championKey : s.rarity;
+        if (!trueCounts[key]) trueCounts[key] = { owned: 0, total: 0 };
+        trueCounts[key].total++;
+        if (s.owned) trueCounts[key].owned++;
+    }
+
     const groups = {};
     for (const s of skins) {
         let key, label;
@@ -119,14 +153,17 @@ function getSortedGroups(skins) {
         } else if (groupBy === 'tier') {
             key = s.rarity;
             label = s.rarity.charAt(0).toUpperCase() + s.rarity.slice(1);
-        } else {
-            key = 'all';
-            label = 'All Skins';
         }
-        if (!groups[key]) groups[key] = { key, label, skins: [], owned: 0, total: 0, mastery: 0 };
+
+        if (!groups[key]) {
+            groups[key] = {
+                key, label, skins: [],
+                owned: trueCounts[key].owned,
+                total: trueCounts[key].total,
+                mastery: 0
+            };
+        }
         groups[key].skins.push(s);
-        groups[key].total++;
-        if (s.owned) groups[key].owned++;
         if (s.mastery) groups[key].mastery = Math.max(groups[key].mastery, s.mastery.points || 0);
     }
 
@@ -280,13 +317,33 @@ modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop)
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modalBackdrop.style.display === 'flex') closeModal(); });
 
 // ─── SUMMONER HEADER ──────────────────────────────────────────────────────────
-function renderSummonerHeader(sum) {
+function renderSummonerHeader(sum, status = 'connected') {
+    let statusText = 'Connected';
+    let statusColor = '#00eb9c';
+
+    if (status === 'connecting') {
+        statusText = 'Connecting';
+        statusColor = '#e8ba5d';
+    } else if (status === 'disconnected') {
+        statusText = 'Disconnected';
+        statusColor = '#e84057';
+    }
+
     summHeader.innerHTML = `
-    <div class="summoner-badge">
-      <img class="summoner-avatar" src="${sum.profileIconUrl}" alt="icon"
-           onerror="this.style.display='none'"/>
-      <span class="summoner-name">${sum.displayName}</span>
-      <span class="summoner-level">Lv. ${sum.summonerLevel}</span>
+    <div class="summoner-profile">
+      <div class="summoner-avatar-wrapper">
+        <img class="summoner-avatar" src="${sum.profileIconUrl}" alt="icon" onerror="this.style.display='none'"/>
+        <div class="summoner-level-wrapper">
+          <div class="summoner-level"><span>${sum.summonerLevel}</span></div>
+        </div>
+      </div>
+      <div class="summoner-details">
+        <div class="summoner-name">${sum.displayName}</div>
+        <div class="summoner-status">
+          <span class="status-dot" style="background: ${statusColor}"></span>
+          <span class="status-text" style="color: ${statusColor}">${statusText}</span>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -315,15 +372,38 @@ function hideError() { errorOverlay.style.display = 'none'; }
 
 // ─── MAIN LOAD ────────────────────────────────────────────────────────────────
 async function loadSkins(isRefresh = false) {
-    showLoading(isRefresh ? 'Refreshing skin data…' : 'Connecting to League Client…');
     hideError();
 
+    // 1. Attempt instantaneous cache load
+    if (!isRefresh && allSkins.length === 0) {
+        const cached = await window.lolAPI.getCachedSkins();
+        if (cached && cached.success) {
+            const data = cached.data;
+            summoner = data.summoner;
+            allSkins = data.skins;
+            renderSummonerHeader(summoner, 'connecting'); // Render as connecting
+            if (data.stats) updateStatsPanel(data.stats);
+            applyFilters();
+            hideLoading(); // MUST CALL THIS to clear the default loading overlay
+        }
+    }
+
+    // 2. Only show loading block if we have completely empty cache
+    if (!isRefresh && allSkins.length === 0) {
+        showLoading('Connecting to League Client…');
+    }
+
+    // 3. Perform live sync
     try {
-        const res = isRefresh
-            ? await window.lolAPI.refreshSkins()
-            : await window.lolAPI.getSkins();
+        const res = isRefresh ? await window.lolAPI.refreshSkins() : await window.lolAPI.getSkins();
 
         if (!res.success) {
+            // If we have cached skins, silently fail the background refresh
+            if (allSkins.length > 0) {
+                renderSummonerHeader(summoner, 'disconnected');
+                return;
+            }
+
             const isNotRunning = res.error === 'LEAGUE_NOT_RUNNING';
             showError(
                 isNotRunning ? 'League Client Not Found' : 'Failed to Load Skins',
@@ -338,13 +418,15 @@ async function loadSkins(isRefresh = false) {
         summoner = data.summoner;
         allSkins = data.skins.map(s => ({ ...s, version: data.version }));
 
-        renderSummonerHeader(summoner);
+        renderSummonerHeader(summoner, 'connected'); // Connected
         if (data.stats) updateStatsPanel(data.stats);
         applyFilters();
         hideLoading();
 
     } catch (err) {
-        showError('Unexpected Error', err.message || String(err));
+        if (allSkins.length === 0) {
+            showError('Unexpected Error', err.message || String(err));
+        }
     }
 }
 

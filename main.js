@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
-const { execSync, execFileSync } = require('child_process');
+const { execSync } = require('child_process');
 
 // ─── LCU LOCKFILE READER ───────────────────────────────────────────────────────
 
@@ -453,8 +453,27 @@ async function fetchSkinsData() {
   }
   const data = await buildOwnedSkins(creds);
   cachedData = data;
+  try {
+    const cachePath = path.join(app.getPath('userData'), 'skin-cache.json');
+    fs.writeFileSync(cachePath, JSON.stringify(data));
+  } catch (e) {
+    console.warn('Failed to write skin cache to disk', e.message);
+  }
   return data;
 }
+
+ipcMain.handle('get-cached-skins', async () => {
+  try {
+    const cachePath = path.join(app.getPath('userData'), 'skin-cache.json');
+    if (fs.existsSync(cachePath)) {
+      const data = fs.readFileSync(cachePath, 'utf8');
+      return { success: true, data: JSON.parse(data), cached: true };
+    }
+  } catch (err) {
+    console.warn('Failed to read skin cache:', err.message);
+  }
+  return { success: false, error: 'NO_CACHE' };
+});
 
 ipcMain.handle('get-skins', async () => {
   try {

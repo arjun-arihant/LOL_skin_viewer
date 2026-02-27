@@ -87,6 +87,8 @@
   color: #ceae78;
   line-height: 1;
   letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .stats-ring-label {

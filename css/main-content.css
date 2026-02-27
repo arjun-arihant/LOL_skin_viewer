@@ -50,7 +50,23 @@
   height: 18px;
 }
 
-.btn-refresh.spinning svg {
+.btn-refresh {
+  width: 32px;
+  height: 32px;
+  background: url('../assets/refresh/button-replay-normal.png') center/cover no-repeat;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-refresh:hover {
+  background: url('../assets/refresh/button-replay-hover.png') center/cover no-repeat;
+}
+
+.btn-refresh:active {
+  background: url('../assets/refresh/button-replay-click.png') center/cover no-repeat;
+}
+
+.btn-refresh.spinning {
   animation: spin 0.7s linear infinite;
 }
 
@@ -61,7 +77,7 @@
   padding: 28px 32px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 180px));
-  gap: 24px 20px;
+  gap: 24px 40px;
   align-content: start;
   justify-content: center;
   outline: none;
@@ -99,4 +115,3 @@
   height: 1px;
   background: linear-gradient(to right, var(--border), transparent);
 }
-
