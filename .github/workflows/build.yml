@@ -27,8 +27,17 @@ jobs:
     - name: Build Electron App
       run: npm run build
 
-    - name: Upload Artifacts
+    - name: Upload Artifacts (for pushes/PRs)
+      if: github.event_name != 'release'
       uses: actions/upload-artifact@v4
       with:
         name: LoL-Skin-Viewer-Portable
         path: dist/*.exe
+
+    - name: Publish to GitHub Releases
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v2
+      with:
+        files: dist/*.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
