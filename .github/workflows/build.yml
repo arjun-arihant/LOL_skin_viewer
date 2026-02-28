@@ -2,42 +2,31 @@ name: Build and Release
 
 on:
   push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
-  release:
-    types: [created]
+    tags:
+      - "v*"
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
-        cache: 'npm'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Build Electron App
-      run: npm run build
+      - name: Build Electron App
+        run: npm run build
 
-    - name: Upload Artifacts (for pushes/PRs)
-      if: github.event_name != 'release'
-      uses: actions/upload-artifact@v4
-      with:
-        name: LoL-Skin-Viewer-Portable
-        path: dist/*.exe
-
-    - name: Publish to GitHub Releases
-      if: github.event_name == 'release'
-      uses: softprops/action-gh-release@v2
-      with:
-        files: dist/*.exe
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
