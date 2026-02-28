@@ -1,6 +1,6 @@
 {
   "name": "lol-skin-viewer",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "League of Legends Owned Skin Viewer using LCU API + Data Dragon",
   "main": "main.js",
   "scripts": {
