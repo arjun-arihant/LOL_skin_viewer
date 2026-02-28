@@ -512,6 +512,19 @@ ipcMain.handle('refresh-skins', async () => {
   }
 });
 
+// ─── WIKI SCRAPING (NOW STATIC JSON) ──────────────────────────────────────────
+let skinPricesCache = null;
+
+ipcMain.handle('get-skin-prices', async () => {
+  try {
+    const prices = require('./assets/skin_prices.json');
+    return { success: true, data: prices };
+  } catch (e) {
+    console.error('[Skin Prices Load Error]', e.message);
+    return { success: false, error: e.message };
+  }
+});
+
 // ─── APP LIFECYCLE ────────────────────────────────────────────────────────────
 
 app.whenReady().then(createWindow);

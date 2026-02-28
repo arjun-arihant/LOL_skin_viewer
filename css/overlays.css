@@ -186,7 +186,7 @@
 }
 
 .modal-champ {
-  font-size: 9px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -196,14 +196,14 @@
 
 .modal-name {
   font-family: 'Cinzel', serif;
-  font-size: 20px;
+  font-size: 30px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 6px;
+  margin-bottom: 0px;
 }
 
 .modal-id {
-  font-size: 10px;
+  font-size: 20px;
   color: var(--text-muted);
 }
 

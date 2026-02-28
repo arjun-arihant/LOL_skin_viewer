@@ -8,5 +8,6 @@ contextBridge.exposeInMainWorld('lolAPI', {
     maximize: () => ipcRenderer.send('window-maximize'),
     close: () => ipcRenderer.send('window-close'),
     openExternal: (url) => ipcRenderer.send('open-external', url),
+    getSkinPrices: () => ipcRenderer.invoke('get-skin-prices'),
     onLiveGameEvent: (callback) => ipcRenderer.on('live-game-event', (event, data) => callback(data)),
 });

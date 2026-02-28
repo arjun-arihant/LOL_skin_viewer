@@ -227,8 +227,18 @@
       <button class="modal-close" id="modal-close">&#x2715;</button>
       <img class="modal-splash" id="modal-splash" src="" alt="" />
       <div class="modal-info">
-        <p class="modal-champ" id="modal-champ"></p>
-        <h2 class="modal-name" id="modal-name"></h2>
+        <div class="modal-header-top"
+          style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 6px;">
+          <div>
+            <p class="modal-champ" id="modal-champ"></p>
+            <h2 class="modal-name" id="modal-name"></h2>
+          </div>
+          <div class="modal-price" style="display: flex; align-items: center; gap: 8px; color: #a09b8c;">
+            <img src="assets/icon-riot-points.png" style="width: 24px; height: 24px;" alt="RP">
+            <span id="modal-price-text"
+              style="font-size: 24px; font-weight: bold; color: #f0e6d2; font-family: 'Inter', sans-serif;"></span>
+          </div>
+        </div>
         <p class="modal-id" id="modal-id"></p>
         <div class="modal-links"
           style="margin-top: auto; padding-top: 16px; display: flex; gap: 12px; font-size: 13px; color: var(--text-secondary);">

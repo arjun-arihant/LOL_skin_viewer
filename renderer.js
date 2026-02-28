@@ -14,6 +14,7 @@ let sortBy = 'mastery';       // alpha | mastery | most-owned
 let summoner = null;
 let isAnimatingStats = false;
 let LCU_PORT = null;
+let rpPrices = {};
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const RARITY_ORDER = { transcendent: 0, exalted: 1, ultimate: 2, mythic: 3, legendary: 4, epic: 5, standard: 6 };
@@ -87,7 +88,14 @@ const AudioController = {
 };
 
 // Set specific volumes
-AudioController.sounds.dropdownOpen.volume = 0.1;
+
+AudioController.sounds.hover.volume = 0.5;
+AudioController.sounds.click.volume = 0.1;
+AudioController.sounds.release.volume = 0.1;
+AudioController.sounds.search.volume = 0.1;
+AudioController.sounds.toggle.volume = 0.03;
+AudioController.sounds.dropdownOpen.volume = 0.05;
+AudioController.sounds.dropdownSelect.volume = 0.2;
 
 // ─── TITLEBAR CONTROLS ────────────────────────────────────────────────────────
 document.getElementById('btn-minimize').addEventListener('click', () => window.lolAPI.minimize());
@@ -384,6 +392,31 @@ function openModal(skin) {
     modalName.textContent = skin.name;
     modalId.textContent = skin.isBase ? 'Base Skin' : skin.isLegacy ? 'Legacy Vault' : skin.rarity.toUpperCase();
 
+    // Setup Price
+    const priceNode = document.querySelector('.modal-price');
+    if (skin.isBase) {
+        priceNode.style.display = 'none';
+    } else {
+        priceNode.style.display = 'flex';
+        let cleanChampName = skin.championName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        let cleanSkinName = skin.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        // Remove the champion name from the skin name if it's included, e.g "Lagoon Dragon Kai'Sa" -> "lagoondragon"
+        if (cleanSkinName !== cleanChampName && cleanSkinName.includes(cleanChampName)) {
+            cleanSkinName = cleanSkinName.replace(cleanChampName, '');
+        }
+
+        if (skin.isBase) cleanSkinName = "original";
+
+        const key = `${cleanChampName}_${cleanSkinName}`;
+        let cost = rpPrices[key];
+        if (!cost || cost === 'Special') {
+            document.getElementById('modal-price-text').textContent = 'NA (Special)';
+        } else {
+            document.getElementById('modal-price-text').textContent = cost;
+        }
+    }
+
     // Update Links
     wikiLink.onclick = (e) => {
         e.preventDefault();
@@ -530,6 +563,11 @@ async function loadSkins(isRefresh = false) {
     if (!isRefresh && allSkins.length === 0) {
         showLoading('Connecting to League Client…');
     }
+
+    // 2. Fetch RP prices in background
+    window.lolAPI.getSkinPrices().then(res => {
+        if (res.success) rpPrices = res.data;
+    }).catch(e => console.error("Failed to load RP prices", e));
 
     // 3. Perform live sync
     try {
