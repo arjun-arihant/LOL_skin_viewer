@@ -51,8 +51,8 @@
 }
 
 .btn-refresh {
-  width: 32px;
-  height: 32px;
+  width: 64px;
+  height: 64px;
   background: url('../assets/refresh/button-replay-normal.png') center/cover no-repeat;
   border: none;
   cursor: pointer;
@@ -74,7 +74,7 @@
 .skin-grid {
   flex: 1;
   overflow-y: auto;
-  padding: 28px 32px;
+  padding: 28px 25px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 216px));
   gap: 24px 40px;

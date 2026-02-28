@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, screen, shell } = require('electron');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
@@ -429,16 +429,16 @@ async function buildOwnedSkins(creds) {
   };
 }
 
-// ─── ELECTRON WINDOW ──────────────────────────────────────────────────────────
-
-let mainWindow;
-
 function createWindow() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 900,
-    minHeight: 600,
+    width: Math.floor(width * 0.66),
+    height: Math.floor(height * 0.862),
+    minWidth: 1175,
+    minHeight: 920,
+    icon: path.join(__dirname, 'assets/icon.ico'),
     frame: false,
     titleBarStyle: 'hidden',
     backgroundColor: '#0a0d14',
@@ -458,8 +458,8 @@ function createWindow() {
     mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize();
   });
   ipcMain.on('window-close', () => mainWindow.close());
+  ipcMain.on('open-external', (event, url) => shell.openExternal(url));
 }
-
 // ─── IPC HANDLERS ─────────────────────────────────────────────────────────────
 
 let cachedData = null;

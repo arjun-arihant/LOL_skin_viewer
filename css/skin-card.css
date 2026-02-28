@@ -128,7 +128,7 @@
 
   /* Gem offset manually tuned to fit within bottom flare of the border */
   /* since bottom edge moved up 1px, we need 1px more negative offset relative to container width */
-  bottom: calc(-11 / 260 * 100%);
+  bottom: calc(-15 / 260 * 100%);
   left: 50%;
   transform: translateX(-50%);
   z-index: 5;
@@ -165,7 +165,7 @@
 }
 
 .skin-card-gem.epic {
-  bottom: calc(-7 / 260 * 100%);
+  bottom: calc(-11 / 260 * 100%);
 }
 
 .skin-card-gem.epic img {

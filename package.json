@@ -5,10 +5,23 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev"
+    "dev": "electron . --dev",
+    "build": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.arjun.lolskinviewer",
+    "productName": "LoL Skin Viewer",
+    "win": {
+      "target": "portable",
+      "icon": "assets/icon.ico"
+    },
+    "directories": {
+      "output": "dist"
+    }
   },
   "devDependencies": {
-    "electron": "^29.0.0"
+    "electron": "^29.0.0",
+    "electron-builder": "^24.9.1"
   },
   "dependencies": {
     "node-fetch": "^2.7.0"

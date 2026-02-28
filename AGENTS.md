@@ -10,6 +10,9 @@
 - **Stats Dashboard** — Granular metrics reporting legacy metrics, total owned count, and rarity categorization.
 - **Auto-Detection** — Aggressively scours all common Windows directories via native PowerShell/WMI calls to securely parse the League `lockfile`.
 - **Modular Design architecture** — Separated logic into Main, Preload, Renderer, and multiple CSS structural files.
+- **State Persistence & QoL** — Checkboxes and sorting/grouping dropdowns persist across sessions using `localStorage`.
+- **Responsive Layout & Packaging** — Dynamic window sizing based on screen dimensions, sticky flexbox layouts, and GitHub Actions integration for automated portable Executable builds using `electron-builder`.
+- **Deep External Integrations** — Features context-aware deep links for exact Champion Fandom Wikis and Khada 3D Model viewer links built dynamically from skin IDs.
 
 ---
 

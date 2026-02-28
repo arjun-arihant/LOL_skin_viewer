@@ -58,6 +58,14 @@ const modalSplash = document.getElementById('modal-splash');
 const modalChamp = document.getElementById('modal-champ');
 const modalName = document.getElementById('modal-name');
 const modalId = document.getElementById('modal-id');
+const wikiLink = document.getElementById('wiki-link');
+const modelLink = document.getElementById('model-link');
+
+// ─── EXTERNAL LINKS ───────────────────────────────────────────────────────────
+document.getElementById('github-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    window.lolAPI.openExternal('https://github.com/arjun-arihant/LOL_skin_viewer');
+});
 
 // ─── AUDIO CONTROLLER ─────────────────────────────────────────────────────────
 const AudioController = {
@@ -366,9 +374,31 @@ const chromaClose = document.getElementById('chroma-close');
 const chromaGrid = document.getElementById('chroma-grid');
 
 function openModal(skin) {
+    const getWikiUrl = (name) => {
+        let n = name;
+        if (n === 'Nunu & Willump') n = 'Nunu';
+        return 'https://wiki.leagueoflegends.com/en-us/' + n.replace(/ /g, '_').replace(/'/g, '%27');
+    };
+
     modalChamp.textContent = skin.championName;
     modalName.textContent = skin.name;
-    modalId.textContent = `Skin ID: ${skin.id}  ·  Skin #${skin.skinNum}`;
+    modalId.textContent = skin.isBase ? 'Base Skin' : skin.isLegacy ? 'Legacy Vault' : skin.rarity.toUpperCase();
+
+    // Update Links
+    wikiLink.onclick = (e) => {
+        e.preventDefault();
+        window.lolAPI.openExternal(getWikiUrl(skin.championName));
+    };
+    modelLink.onclick = (e) => {
+        e.preventDefault();
+        window.lolAPI.openExternal(`https://modelviewer.lol/model-viewer?id=${skin.id}`);
+    };
+
+    modalBackdrop.style.display = 'flex';
+    // Add open class after a tiny delay to allow display flex to apply
+    requestAnimationFrame(() => {
+        modalBackdrop.classList.add('open');
+    });
     modalSplash.src = skin.splashUrl;
     modalBackdrop.style.display = 'flex';
 }
@@ -551,12 +581,14 @@ panelSearch.addEventListener('input', (e) => {
 document.getElementById('toggle-unowned').addEventListener('change', (e) => {
     AudioController.play('toggle');
     showUnowned = e.target.checked;
+    localStorage.setItem('showUnowned', showUnowned);
     applyFilters();
 });
 
 document.getElementById('toggle-base').addEventListener('change', (e) => {
     AudioController.play('toggle');
     showBase = e.target.checked;
+    localStorage.setItem('showBase', showBase);
     applyFilters();
 });
 
@@ -591,11 +623,13 @@ function setupDropdown(wrapId, menuId, labelId, onChange) {
 
 setupDropdown('group-dropdown', 'group-menu', 'group-label', (val) => {
     groupBy = val;
+    localStorage.setItem('groupBy', groupBy);
     applyFilters();
 });
 
 setupDropdown('sort-dropdown', 'sort-menu', 'sort-label', (val) => {
     sortBy = val;
+    localStorage.setItem('sortBy', sortBy);
     applyFilters();
 });
 
@@ -618,6 +652,37 @@ btnRetry.addEventListener('click', () => {
 });
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
+
+// Load previously saved states from localStorage
+if (localStorage.getItem('showUnowned') !== null) {
+    showUnowned = localStorage.getItem('showUnowned') === 'true';
+    document.getElementById('toggle-unowned').checked = showUnowned;
+}
+if (localStorage.getItem('showBase') !== null) {
+    showBase = localStorage.getItem('showBase') === 'true';
+    document.getElementById('toggle-base').checked = showBase;
+}
+if (localStorage.getItem('groupBy')) {
+    groupBy = localStorage.getItem('groupBy');
+}
+if (localStorage.getItem('sortBy')) {
+    sortBy = localStorage.getItem('sortBy');
+}
+
+// Preset the actual visual text of the dropdowns to match the stored initial state
+function initDropdownVisuals(menuId, labelId, value) {
+    const menu = document.getElementById(menuId);
+    const label = document.getElementById(labelId);
+    menu.querySelectorAll('.dropdown-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.value === value);
+        if (item.dataset.value === value) label.textContent = item.textContent.replace('✓', '').trim();
+    });
+}
+initDropdownVisuals('group-menu', 'group-label', groupBy);
+initDropdownVisuals('sort-menu', 'sort-label', sortBy);
+
+document.getElementById('github-link').addEventListener('click', (e) => { e.preventDefault(); window.lolAPI.openExternal('https://github.com/arjun-arihant/LOL_skin_viewer'); });
+
 loadSkins(false);
 
 if (window.lolAPI.onLiveGameEvent) {
