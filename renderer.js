@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────────────────
-   LOL Skin Viewer — Renderer
+   RiftVault — Renderer
    Panel-based layout with CDragon borders, tier gems, and grouped rendering
 ───────────────────────────────────────────────────────────────────────── */
 
@@ -15,6 +15,9 @@ let summoner = null;
 let isAnimatingStats = false;
 let LCU_PORT = null;
 let rpPrices = {};
+let champSelectActive = false;
+let champSelectChampId = 0;
+let champSelectSkinId = 0;
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const RARITY_ORDER = { transcendent: 0, exalted: 1, ultimate: 2, mythic: 3, legendary: 4, epic: 5, standard: 6 };
@@ -65,7 +68,7 @@ const modelLink = document.getElementById('model-link');
 // ─── EXTERNAL LINKS ───────────────────────────────────────────────────────────
 document.getElementById('github-link').addEventListener('click', (e) => {
     e.preventDefault();
-    window.lolAPI.openExternal('https://github.com/arjun-arihant/LOL_skin_viewer');
+    window.riftVaultAPI.openExternal('https://github.com/arjun-arihant/RiftVault');
 });
 
 // ─── AUDIO CONTROLLER ─────────────────────────────────────────────────────────
@@ -98,9 +101,9 @@ AudioController.sounds.dropdownOpen.volume = 0.05;
 AudioController.sounds.dropdownSelect.volume = 0.2;
 
 // ─── TITLEBAR CONTROLS ────────────────────────────────────────────────────────
-document.getElementById('btn-minimize').addEventListener('click', () => window.lolAPI.minimize());
-document.getElementById('btn-maximize').addEventListener('click', () => window.lolAPI.maximize());
-document.getElementById('btn-close').addEventListener('click', () => window.lolAPI.close());
+document.getElementById('btn-minimize').addEventListener('click', () => window.riftVaultAPI.minimize());
+document.getElementById('btn-maximize').addEventListener('click', () => window.riftVaultAPI.maximize());
+document.getElementById('btn-close').addEventListener('click', () => window.riftVaultAPI.close());
 
 // ─── STATS PANEL ──────────────────────────────────────────────────────────────
 function countUp(el, endVal) {
@@ -357,6 +360,44 @@ function createSkinCard(skin) {
             });
             card.appendChild(badge);
         }
+
+        // Apply in Client — card-level icon button
+        const applyBtn = document.createElement('button');
+        applyBtn.className = 'card-apply-btn';
+        applyBtn.dataset.tooltip = 'Apply in Client';
+        applyBtn.dataset.skinId = skin.id;
+        applyBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>`;
+
+        // Show immediately if champ select is already active and matches
+        const skinChampId = Math.floor(skin.id / 1000);
+        if (champSelectActive && champSelectChampId === skinChampId) {
+            applyBtn.style.display = 'flex';
+            // Mark as applied if this is the currently equipped skin
+            if (champSelectSkinId === skin.id) {
+                applyBtn.classList.add('applied');
+                applyBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>`;
+            }
+        }
+
+        applyBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            AudioController.play('click');
+            applyBtn.style.pointerEvents = 'none';
+            const result = await window.riftVaultAPI.selectSkin(skin.id);
+            if (result.success) {
+                // Polling will update all buttons on the next tick
+                applyBtn.classList.add('applied');
+                applyBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>`;
+            } else {
+                applyBtn.classList.add('error');
+                setTimeout(() => {
+                    applyBtn.classList.remove('error');
+                    applyBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>`;
+                    applyBtn.style.pointerEvents = '';
+                }, 2000);
+            }
+        });
+        card.appendChild(applyBtn);
     } else {
         // Lock icon for unowned
         const lock = document.createElement('div');
@@ -367,8 +408,9 @@ function createSkinCard(skin) {
 
     card.addEventListener('mouseenter', () => AudioController.play('hover'));
     card.addEventListener('click', (e) => {
-        // Prevent opening standard modal if interacting with Chroma Badge
+        // Prevent opening standard modal if interacting with Chroma Badge or Apply button
         if (e.target.closest('.chroma-badge')) return;
+        if (e.target.closest('.card-apply-btn')) return;
 
         AudioController.play('click');
         openModal(skin);
@@ -420,11 +462,11 @@ function openModal(skin) {
     // Update Links
     wikiLink.onclick = (e) => {
         e.preventDefault();
-        window.lolAPI.openExternal(getWikiUrl(skin.championName));
+        window.riftVaultAPI.openExternal(getWikiUrl(skin.championName));
     };
     modelLink.onclick = (e) => {
         e.preventDefault();
-        window.lolAPI.openExternal(`https://modelviewer.lol/model-viewer?id=${skin.id}`);
+        window.riftVaultAPI.openExternal(`https://modelviewer.lol/model-viewer?id=${skin.id}`);
     };
 
     modalBackdrop.style.display = 'flex';
@@ -434,6 +476,69 @@ function openModal(skin) {
     });
     modalSplash.src = skin.splashUrl;
     modalBackdrop.style.display = 'flex';
+
+    // ─── Apply in Client button logic ─────────────────────────────────────────
+    const btnApply = document.getElementById('btn-apply-skin');
+    const applySep = document.getElementById('apply-separator');
+    const skinChampId = Math.floor(skin.id / 1000);
+    const canApply = champSelectActive && skin.owned && champSelectChampId === skinChampId;
+
+    if (canApply) {
+        btnApply.style.display = 'inline-flex';
+        applySep.style.display = '';
+        btnApply.className = 'btn-apply-skin';
+        btnApply.disabled = false;
+        btnApply.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/>
+            </svg>
+            ${champSelectSkinId === skin.id ? 'Applied ✓' : 'Apply in Client'}
+        `;
+        if (champSelectSkinId === skin.id) {
+            btnApply.classList.add('applied');
+        }
+
+        // Fresh click handler (remove old ones)
+        const newBtn = btnApply.cloneNode(true);
+        btnApply.parentNode.replaceChild(newBtn, btnApply);
+        if (champSelectSkinId !== skin.id) {
+            newBtn.addEventListener('click', async () => {
+                newBtn.disabled = true;
+                newBtn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/>
+                    </svg>
+                    Applying…
+                `;
+                const result = await window.riftVaultAPI.selectSkin(skin.id);
+                if (result.success) {
+                    newBtn.className = 'btn-apply-skin applied';
+                    newBtn.innerHTML = `
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                        </svg>
+                        Applied ✓
+                    `;
+                } else {
+                    newBtn.className = 'btn-apply-skin error';
+                    newBtn.innerHTML = `Failed`;
+                    newBtn.disabled = false;
+                    setTimeout(() => {
+                        newBtn.className = 'btn-apply-skin';
+                        newBtn.innerHTML = `
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/>
+                            </svg>
+                            Apply in Client
+                        `;
+                    }, 2000);
+                }
+            });
+        }
+    } else {
+        btnApply.style.display = 'none';
+        applySep.style.display = 'none';
+    }
 }
 
 function openChromaModal(skin) {
@@ -546,7 +651,7 @@ async function loadSkins(isRefresh = false) {
 
     // 1. Attempt instantaneous cache load
     if (!isRefresh && allSkins.length === 0) {
-        const cached = await window.lolAPI.getCachedSkins();
+        const cached = await window.riftVaultAPI.getCachedSkins();
         if (cached && cached.success) {
             const data = cached.data;
             summoner = data.summoner;
@@ -565,13 +670,13 @@ async function loadSkins(isRefresh = false) {
     }
 
     // 2. Fetch RP prices in background
-    window.lolAPI.getSkinPrices().then(res => {
+    window.riftVaultAPI.getSkinPrices().then(res => {
         if (res.success) rpPrices = res.data;
     }).catch(e => console.error("Failed to load RP prices", e));
 
     // 3. Perform live sync
     try {
-        const res = isRefresh ? await window.lolAPI.refreshSkins() : await window.lolAPI.getSkins();
+        const res = isRefresh ? await window.riftVaultAPI.refreshSkins() : await window.riftVaultAPI.getSkins();
 
         if (!res.success) {
             // If we have cached skins, silently fail the background refresh
@@ -719,14 +824,55 @@ function initDropdownVisuals(menuId, labelId, value) {
 initDropdownVisuals('group-menu', 'group-label', groupBy);
 initDropdownVisuals('sort-menu', 'sort-label', sortBy);
 
-document.getElementById('github-link').addEventListener('click', (e) => { e.preventDefault(); window.lolAPI.openExternal('https://github.com/arjun-arihant/LOL_skin_viewer'); });
+document.getElementById('github-link').addEventListener('click', (e) => { e.preventDefault(); window.riftVaultAPI.openExternal('https://github.com/arjun-arihant/RiftVault'); });
 
 loadSkins(false);
 
-if (window.lolAPI.onLiveGameEvent) {
-    window.lolAPI.onLiveGameEvent((event) => {
+if (window.riftVaultAPI.onLiveGameEvent) {
+    window.riftVaultAPI.onLiveGameEvent((event) => {
         if (event.type === 'champ-hover' && event.championId) {
             scrollToChampion(event.championId);
+        }
+        if (event.type === 'champ-select-state') {
+            champSelectActive = event.active;
+            champSelectChampId = event.championId || 0;
+            champSelectSkinId = event.currentSkinId || 0;
+
+            // Live-refresh the Apply button if modal is currently open
+            const btnApply = document.getElementById('btn-apply-skin');
+            const applySep = document.getElementById('apply-separator');
+            if (modalBackdrop.style.display !== 'none' && btnApply) {
+                if (!event.active) {
+                    btnApply.style.display = 'none';
+                    applySep.style.display = 'none';
+                }
+            }
+
+            // Toggle card-level apply buttons + sync applied state
+            const APPLY_DEFAULT_SVG = `<svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>`;
+            const APPLY_CHECK_SVG = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>`;
+            document.querySelectorAll('.card-apply-btn').forEach(btn => {
+                const sid = parseInt(btn.dataset.skinId, 10);
+                const cid = Math.floor(sid / 1000);
+                if (event.active && event.championId === cid) {
+                    btn.style.display = 'flex';
+                    // Sync applied state: green check on currently equipped skin, default on others
+                    if (event.currentSkinId === sid) {
+                        btn.classList.add('applied');
+                        btn.classList.remove('error');
+                        btn.innerHTML = APPLY_CHECK_SVG;
+                    } else {
+                        btn.classList.remove('applied', 'error');
+                        btn.style.pointerEvents = '';
+                        btn.innerHTML = APPLY_DEFAULT_SVG;
+                    }
+                } else {
+                    btn.style.display = 'none';
+                    btn.classList.remove('applied', 'error');
+                    btn.style.pointerEvents = '';
+                    btn.innerHTML = APPLY_DEFAULT_SVG;
+                }
+            });
         }
     });
 }

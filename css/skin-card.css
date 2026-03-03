@@ -213,6 +213,93 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
+/* Apply in Client — card-level icon */
+.card-apply-btn {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  width: 31px;
+  height: 31px;
+  display: none;
+  /* shown via JS when champ select matches */
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--gold);
+  border-radius: 50%;
+  cursor: pointer;
+  pointer-events: auto;
+  padding: 0;
+  transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+/* Custom tooltip — faster than native title */
+.card-apply-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.88);
+  color: #f0e6d2;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease 200ms;
+}
+
+.card-apply-btn:hover::after {
+  opacity: 1;
+}
+
+.card-apply-btn:hover {
+  transform: scale(1.15);
+  background: rgba(200, 155, 60, 0.25);
+  box-shadow: 0 0 10px rgba(200, 155, 60, 0.35);
+}
+
+.card-apply-btn:active {
+  transform: scale(0.92);
+}
+
+.card-apply-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: var(--gold);
+  flex-shrink: 0;
+}
+
+.card-apply-btn.applied {
+  border-color: #00eb9c;
+  pointer-events: none;
+}
+
+.card-apply-btn.applied svg {
+  fill: #00eb9c;
+}
+
+.card-apply-btn.applied::after {
+  content: 'Applied!';
+}
+
+.card-apply-btn.error {
+  border-color: #e84057;
+}
+
+.card-apply-btn.error svg {
+  fill: #e84057;
+}
+
+.card-apply-btn.error::after {
+  content: 'Failed';
+}
+
 /* Unowned skins */
 .skin-card.unowned .skin-card-img {
   filter: brightness(0.45) saturate(0.5);

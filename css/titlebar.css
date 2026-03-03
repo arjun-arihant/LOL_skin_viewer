@@ -29,12 +29,28 @@
   height: 64px;
 }
 
+.logo-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  line-height: 1.1;
+}
+
 .logo-text {
   font-family: 'Cinzel', serif;
-  font-size: 30px;
+  font-size: 36px;
   font-weight: 600;
   color: var(--gold);
   letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.logo-subtitle {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 

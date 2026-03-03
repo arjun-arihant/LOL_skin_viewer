@@ -1,8 +1,8 @@
-# LoL Skin Viewer - Agent Documentation
+# RiftVault - Agent Documentation
 
 ## Project Overview
 
-**LoL Skin Viewer** is an Electron-based desktop application for Windows that displays a League of Legends player's complete skin collection. It aggregates data securely from the local League Client (LCU API), Riot's Data Dragon, and CommunityDragon, outputting an ultra-premium, native-feeling User Interface modeled directly after League's aesthetic.
+**RiftVault** is an Electron-based desktop application for Windows that displays a League of Legends player's complete skin collection. It aggregates data securely from the local League Client (LCU API), Riot's Data Dragon, and CommunityDragon, outputting an ultra-premium, native-feeling User Interface modeled directly after League's aesthetic.
 
 ### Key Capabilities
 - **Complete Collection View** — Displays both owned and unowned skins. Accurate card topologies ensure perfectly aligned borders and rarity gems.
@@ -34,9 +34,9 @@
 The project has recently undergone an architectural shift to prioritize frontend maintainability.
 
 ```
-LOL_skin_viewer/
+RiftVault/
 ├── main.js              # Electron main process - LCU API communication, multi-drive discovery
-├── preload.js           # Secure context bridge (`window.lolAPI`)
+├── preload.js           # Secure context bridge (`window.riftVaultAPI`)
 ├── renderer.js          # DOM manipulation, filter engine, modal state management
 ├── index.html           # Core DOM markup
 ├── css/                 # Modern, modular CSS system

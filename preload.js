@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('lolAPI', {
+contextBridge.exposeInMainWorld('riftVaultAPI', {
     getSkins: () => ipcRenderer.invoke('get-skins'),
     getCachedSkins: () => ipcRenderer.invoke('get-cached-skins'),
     refreshSkins: () => ipcRenderer.invoke('refresh-skins'),
@@ -10,4 +10,5 @@ contextBridge.exposeInMainWorld('lolAPI', {
     openExternal: (url) => ipcRenderer.send('open-external', url),
     getSkinPrices: () => ipcRenderer.invoke('get-skin-prices'),
     onLiveGameEvent: (callback) => ipcRenderer.on('live-game-event', (event, data) => callback(data)),
+    selectSkin: (id) => ipcRenderer.invoke('select-skin', id),
 });

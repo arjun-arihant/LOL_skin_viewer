@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="assets/icon.png" alt="LoL Skin Viewer Logo" width="160" height="auto" />
-  <h1>League of Legends Skin Viewer</h1>
-  <p><em>A sleek, elegant desktop application built with Electron that displays your complete League of Legends skin collection (both owned and unowned) utilizing a native client-inspired dark theme.</em></p>
+  <img src="assets/icon.png" alt="RiftVault Logo" width="160" height="auto" />
+  <h1>RiftVault</h1>
+  <p><em>A League Skin Collection Viewer — A sleek, elegant desktop application built with Electron that displays your complete League of Legends skin collection (both owned and unowned) utilizing a native client-inspired dark theme.</em></p>
   
   <p>
     <img src="https://img.shields.io/badge/Electron-33-blue?logo=electron&logoColor=white" alt="Electron" />
@@ -40,6 +40,12 @@ Click on any owned skin to flip the card to view its **RP Cost** and additional 
 ![Skin Card Details](assets/screenshots/screenshot-card.png)
 *Detailed skin view showing RP costs, release details, and one-click access to 3D Khada models.*
 
+### 🎮 Apply Skin In-Client
+During champion select, **apply any owned skin directly from RiftVault** to your League client with a single click. The app detects when you've locked in a champion and shows a contextual "Apply in Client" button — both on the skin card grid and inside the detail modal. Real-time polling tracks which skin is currently equipped.
+
+![Apply Skin In-Client](assets/screenshots/screenshot-apply-skin.png)
+*The Apply in Client button appears on skin cards and in the modal after locking in a champion during champ select.*
+
 ### 💾 Offline Viewing & Caching
 Check your entire skin collection without even opening the League of Legends client! The app securely caches your inventory locally, allowing you to seamlessly browse your skins offline at any time.
 
@@ -72,7 +78,7 @@ Get up and running in under a minute!
 #### Option 1: Download from Release (Recommended)
 The easiest way to get started. No development knowledge required!
 1. Navigate to the **[Releases](../../releases)** tab on GitHub.
-2. Download the latest `LOL-Skin-Viewer-Setup-x.x.x.exe` file.
+2. Download the latest `RiftVault-Setup-x.x.x.exe` file.
 3. Run the installer and launch the app.
 4. *(Ensure your League Client is open and logged in!)*
 
@@ -81,8 +87,8 @@ If you prefer to compile the application yourself or want to contribute:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/LOL_skin_viewer.git
-cd LOL_skin_viewer
+git clone https://github.com/arjun-arihant/RiftVault.git
+cd RiftVault
 
 # Install required dependencies
 npm install
@@ -116,7 +122,7 @@ npm start
 A clean, modular layout ensuring maintainability and separation of concerns:
 
 ```text
-LOL_skin_viewer/
+RiftVault/
 ├── main.js          # Electron main process (LCU discovery, IPC API, data aggregation)
 ├── preload.js       # Secure context bridge API
 ├── renderer.js      # Frontend logic (Filtering, rendering, dropdowns, DOM)

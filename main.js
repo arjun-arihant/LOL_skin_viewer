@@ -144,15 +144,24 @@ function getLCUCredentials() {
 
 // ─── LCU HTTP CLIENT ──────────────────────────────────────────────────────────
 
-function lcuRequest(port, password, endpoint) {
+function lcuRequest(port, password, endpoint, method = 'GET', body = null) {
   return new Promise((resolve, reject) => {
     const auth = Buffer.from(`riot:${password}`).toString('base64');
+    const headers = { Authorization: `Basic ${auth}` };
+
+    let bodyStr = null;
+    if (body) {
+      bodyStr = JSON.stringify(body);
+      headers['Content-Type'] = 'application/json';
+      headers['Content-Length'] = Buffer.byteLength(bodyStr);
+    }
+
     const options = {
       hostname: '127.0.0.1',
       port,
       path: endpoint,
-      method: 'GET',
-      headers: { Authorization: `Basic ${auth}` },
+      method,
+      headers,
       rejectUnauthorized: false, // LCU uses self-signed cert
     };
 
@@ -173,6 +182,7 @@ function lcuRequest(port, password, endpoint) {
       req.destroy();
       reject(new Error('LCU request timed out'));
     });
+    if (bodyStr) req.write(bodyStr);
     req.end();
   });
 }
@@ -435,9 +445,9 @@ function createWindow() {
 
   mainWindow = new BrowserWindow({
     width: Math.floor(width * 0.66),
-    height: Math.floor(height * 0.862),
+    height: Math.floor(height * 0.78),
     minWidth: 1175,
-    minHeight: 920,
+    minHeight: 900,
     icon: path.join(__dirname, 'assets/icon.ico'),
     frame: false,
     titleBarStyle: 'hidden',
@@ -525,6 +535,25 @@ ipcMain.handle('get-skin-prices', async () => {
   }
 });
 
+// ─── APPLY SKIN IN CLIENT ─────────────────────────────────────────────────────
+
+ipcMain.handle('select-skin', async (event, skinId) => {
+  const creds = getLCUCredentials();
+  if (!creds) return { success: false, error: 'NO_CLIENT' };
+  try {
+    const result = await lcuRequest(
+      creds.port, creds.password,
+      '/lol-champ-select/v1/session/my-selection',
+      'PATCH',
+      { selectedSkinId: skinId }
+    );
+    return { success: true, data: result };
+  } catch (err) {
+    console.error('[Select Skin Error]', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
 // ─── APP LIFECYCLE ────────────────────────────────────────────────────────────
 
 app.whenReady().then(createWindow);
@@ -541,12 +570,17 @@ app.on('activate', () => {
 let pollingInterval = null;
 let lastHoveredChampId = null;
 
+let lastChampSelectActive = false;
+
 function startChampSelectPolling() {
   if (pollingInterval) return;
-  pollingInterval = setInterval(async () => {
-    if (!mainWindow) return;
+
+  async function poll() {
+    if (!mainWindow) { pollingInterval = setTimeout(poll, 2500); return; }
     const creds = getLCUCredentials();
-    if (!creds) return;
+    if (!creds) { pollingInterval = setTimeout(poll, 2500); return; }
+
+    let nextDelay = 2500; // default idle rate
 
     try {
       const session = await lcuRequest(creds.port, creds.password, '/lol-champ-select/v1/session');
@@ -558,12 +592,47 @@ function startChampSelectPolling() {
             lastHoveredChampId = champId;
             mainWindow.webContents.send('live-game-event', { type: 'champ-hover', championId: champId });
           }
+
+          // Check if the local player has locked in (pick action completed)
+          const isLockedIn = (session.actions || []).flat().some(
+            a => a.actorCellId === session.localPlayerCellId && a.type === 'pick' && a.completed
+          );
+
+          // Emit champ select state so renderer can show/hide the Apply button
+          mainWindow.webContents.send('live-game-event', {
+            type: 'champ-select-state',
+            active: isLockedIn,
+            championId: champId || 0,
+            currentSkinId: localPlayer.selectedSkinId || 0,
+          });
+          lastChampSelectActive = true;
+          nextDelay = 500; // faster polling during champ select
         }
       } else {
         lastHoveredChampId = null;
+        if (lastChampSelectActive) {
+          mainWindow.webContents.send('live-game-event', {
+            type: 'champ-select-state',
+            active: false,
+            championId: 0,
+            currentSkinId: 0,
+          });
+          lastChampSelectActive = false;
+        }
       }
     } catch (e) {
       lastHoveredChampId = null;
+      if (lastChampSelectActive) {
+        mainWindow.webContents.send('live-game-event', {
+          type: 'champ-select-state',
+          active: false,
+          championId: 0,
+          currentSkinId: 0,
+        });
+        lastChampSelectActive = false;
+      }
     }
-  }, 2000);
+    pollingInterval = setTimeout(poll, nextDelay);
+  }
+  pollingInterval = setTimeout(poll, 500);
 }

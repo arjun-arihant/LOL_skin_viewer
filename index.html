@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LoL Skin Viewer</title>
+  <title>RiftVault</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -28,7 +28,10 @@
       <div class="logo-icon">
         <img src="assets/icon-line-artbg.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
       </div>
-      <span class="logo-text">Skin Collection</span>
+      <div class="logo-text-wrap">
+        <span class="logo-text">RiftVault</span>
+        <span class="logo-subtitle">A League Skin Collection Viewer</span>
+      </div>
     </div>
 
     <div class="titlebar-center" id="summoner-header">
@@ -241,7 +244,7 @@
         </div>
         <p class="modal-id" id="modal-id"></p>
         <div class="modal-links"
-          style="margin-top: auto; padding-top: 16px; display: flex; gap: 12px; font-size: 13px; color: var(--text-secondary);">
+          style="margin-top: auto; padding-top: 16px; display: flex; gap: 12px; font-size: 13px; color: var(--text-secondary); align-items: center;">
           <a id="wiki-link" href="#"
             style="color: var(--text-secondary); text-decoration: none; display: flex; align-items: center; gap: 4px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -253,6 +256,15 @@
           <span style="color: rgba(200, 155, 60, 0.3);">|</span>
           <a id="model-link" href="#" style="color: #c8aa6e; font-weight: bold; text-decoration: none;">View 3D
             model</a>
+          <span class="apply-separator" id="apply-separator"
+            style="color: rgba(200, 155, 60, 0.3); display: none;">|</span>
+          <button id="btn-apply-skin" class="btn-apply-skin" style="display: none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z" />
+            </svg>
+            Apply in Client
+          </button>
         </div>
       </div>
     </div>
