@@ -27,6 +27,8 @@ jobs:
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
+          name: RiftVault v${{ github.ref_name }}
+          body_path: CHANGELOG.md
           files: dist/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
