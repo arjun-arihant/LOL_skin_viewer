@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- SEO -->
+    <title>RiftVault — League of Legends Skin Collection Viewer</title>
+    <meta name="description"
+        content="RiftVault is a free, open-source Windows desktop app to browse your full League of Legends skin collection — owned and unowned — powered by the LCU API. Apply skins in champion select instantly." />
+    <meta name="keywords"
+        content="League of Legends skin viewer, LoL skin collection, LCU API, LoL desktop app, skin browser, chroma viewer, champion select skin, free LoL tool" />
+    <link rel="canonical" href="https://arjun-arihant.github.io/RiftVault/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://arjun-arihant.github.io/RiftVault/" />
+    <meta property="og:title" content="RiftVault — League of Legends Skin Collection Viewer" />
+    <meta property="og:description"
+        content="Browse your full League of Legends skin collection — owned and unowned. Apply skins directly from champion select. Free & open-source." />
+    <meta property="og:image"
+        content="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/screenshots/screenshot-main.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="RiftVault — League of Legends Skin Collection Viewer" />
+    <meta name="twitter:description"
+        content="Browse your full LoL skin collection offline. Apply skins in champ select. Free & open-source." />
+    <meta name="twitter:image"
+        content="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/screenshots/screenshot-main.png" />
+
+    <link rel="icon" href="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Nunito:wght@300;400;500;600&display=swap"
+        rel="stylesheet" />
+
+    <style>
+        :root {
+            --gold: #C89B3C;
+            --gold-light: #F0E6C0;
+            --gold-dim: #7A5C1E;
+            --hex-blue: #0AC8B9;
+            --hex-blue-dim: #072C2A;
+            --bg: #05080F;
+            --bg-card: #0C1120;
+            --bg-card2: #101826;
+            --border: rgba(200, 155, 60, 0.18);
+            --border-bright: rgba(200, 155, 60, 0.5);
+            --text: #C8C0B0;
+            --text-dim: #7A7266;
+            --white: #F5EFE0;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        /* ─── NOISE OVERLAY ─── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.4;
+        }
+
+        /* ─── NAVBAR ─── */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 2.5rem;
+            background: rgba(5, 8, 15, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            text-decoration: none;
+        }
+
+        .nav-logo img {
+            width: 28px;
+            height: 28px;
+        }
+
+        .nav-logo span {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--gold);
+            letter-spacing: 0.08em;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        nav ul a {
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        nav ul a:hover {
+            color: var(--gold);
+        }
+
+        .nav-cta {
+            background: var(--gold);
+            color: var(--bg) !important;
+            padding: 0.45rem 1.1rem;
+            border-radius: 2px;
+            font-weight: 700 !important;
+            letter-spacing: 0.08em !important;
+            transition: background 0.2s, opacity 0.2s !important;
+        }
+
+        .nav-cta:hover {
+            background: var(--gold-light) !important;
+            opacity: 1 !important;
+            color: var(--bg) !important;
+        }
+
+        /* ─── HERO ─── */
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 7rem 2rem 4rem;
+            overflow: hidden;
+        }
+
+        /* Hextech grid background */
+        .hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(200, 155, 60, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(200, 155, 60, 0.04) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 80%);
+            pointer-events: none;
+        }
+
+        .hero-glow {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 700px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(200, 155, 60, 0.09) 0%, transparent 65%);
+            pointer-events: none;
+        }
+
+        .hero-glow-blue {
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 200px;
+            background: radial-gradient(ellipse, rgba(10, 200, 185, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: 1px solid var(--border-bright);
+            background: rgba(200, 155, 60, 0.06);
+            color: var(--gold);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            padding: 0.4rem 1rem;
+            border-radius: 2px;
+            margin-bottom: 2rem;
+            animation: fadeUp 0.6s ease both;
+        }
+
+        .hero-badge::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: var(--hex-blue);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--hex-blue);
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(3rem, 8vw, 6.5rem);
+            font-weight: 900;
+            letter-spacing: 0.06em;
+            line-height: 1;
+            color: var(--white);
+            margin-bottom: 0.2em;
+            animation: fadeUp 0.6s 0.1s ease both;
+        }
+
+        h1 span {
+            color: var(--gold);
+            display: block;
+            font-size: 0.55em;
+            letter-spacing: 0.3em;
+            margin-bottom: 0.3em;
+        }
+
+        .hero-sub {
+            font-size: clamp(0.95rem, 2vw, 1.15rem);
+            font-weight: 400;
+            color: var(--text);
+            max-width: 560px;
+            line-height: 1.8;
+            margin: 1.5rem auto 2.5rem;
+            animation: fadeUp 0.6s 0.2s ease both;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeUp 0.6s 0.3s ease both;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: var(--gold);
+            color: var(--bg);
+            font-family: 'Nunito', sans-serif;
+            font-weight: 800;
+            font-size: 0.85rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            text-decoration: none;
+            padding: 0.9rem 2rem;
+            border-radius: 2px;
+            transition: background 0.2s, transform 0.15s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
+        }
+
+        .btn-primary:hover {
+            background: var(--gold-light);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            border: 1px solid var(--border-bright);
+            color: var(--gold);
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            text-decoration: none;
+            padding: 0.9rem 1.6rem;
+            border-radius: 2px;
+            transition: border-color 0.2s, background 0.2s, transform 0.15s;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(200, 155, 60, 0.08);
+            border-color: var(--gold);
+            transform: translateY(-2px);
+        }
+
+        .hero-screenshot {
+            position: relative;
+            margin-top: 5rem;
+            max-width: 1000px;
+            width: 100%;
+            animation: fadeUp 0.8s 0.4s ease both;
+        }
+
+        .screenshot-frame {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow:
+                0 0 0 1px rgba(200, 155, 60, 0.08),
+                0 30px 80px rgba(0, 0, 0, 0.8),
+                0 0 120px rgba(200, 155, 60, 0.06);
+            position: relative;
+        }
+
+        .screenshot-frame::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 28px;
+            background: #070C18;
+            border-bottom: 1px solid var(--border);
+            z-index: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .screenshot-frame::after {
+            content: '● ● ●';
+            position: absolute;
+            top: 0;
+            left: 1rem;
+            height: 28px;
+            line-height: 28px;
+            font-size: 0.45rem;
+            letter-spacing: 0.15em;
+            color: var(--text-dim);
+            z-index: 2;
+        }
+
+        .screenshot-frame img {
+            display: block;
+            width: 100%;
+            margin-top: 28px;
+        }
+
+        /* ─── SECTION SHARED ─── */
+        section {
+            position: relative;
+            z-index: 1;
+            padding: 6rem 2rem;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--hex-blue);
+            margin-bottom: 0.8rem;
+        }
+
+        .section-title {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 700;
+            color: var(--white);
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+
+        .section-desc {
+            color: var(--text);
+            font-size: 1rem;
+            line-height: 1.8;
+            max-width: 560px;
+        }
+
+        /* ─── DIVIDER ─── */
+        .divider {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-bright), transparent);
+            margin: 0 auto;
+        }
+
+        /* ─── FEATURES ─── */
+        #features {
+            padding-top: 5rem;
+            padding-bottom: 5rem;
+        }
+
+        .features-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .features-header .section-desc {
+            margin: 0 auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            padding: 2.2rem;
+            transition: background 0.2s;
+        }
+
+        .feature-card:hover {
+            background: var(--bg-card2);
+        }
+
+        .feature-icon {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .feature-card h3 {
+            font-family: 'Cinzel', serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 0.05em;
+            margin-bottom: 0.7rem;
+            text-transform: uppercase;
+        }
+
+        .feature-card p {
+            font-size: 0.88rem;
+            line-height: 1.75;
+            color: var(--text);
+        }
+
+        /* ─── SCREENSHOTS ─── */
+        #screenshots {
+            padding-top: 5rem;
+            padding-bottom: 5rem;
+        }
+
+        .screenshots-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2.5rem;
+            margin-top: 3rem;
+        }
+
+        .screenshot-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .screenshot-item .screenshot-frame img {
+            margin-top: 28px;
+        }
+
+        .screenshot-caption {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-align: center;
+            letter-spacing: 0.04em;
+        }
+
+        /* ─── HOW IT WORKS ─── */
+        #how-it-works {
+            padding-top: 5rem;
+            padding-bottom: 5rem;
+        }
+
+        .how-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            margin-top: 3rem;
+        }
+
+        .steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .step {
+            display: flex;
+            gap: 1.4rem;
+            padding: 1.8rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .step:first-child {
+            padding-top: 0;
+        }
+
+        .step:last-child {
+            border-bottom: none;
+        }
+
+        .step-num {
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--gold-dim);
+            line-height: 1;
+            min-width: 2rem;
+            margin-top: 0.1rem;
+        }
+
+        .step h4 {
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--white);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 0.4rem;
+        }
+
+        .step p {
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: var(--text);
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .tech-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.2rem 1.4rem;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+
+        .tech-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--hex-blue);
+            box-shadow: 0 0 10px var(--hex-blue);
+            margin-top: 0.35rem;
+            flex-shrink: 0;
+        }
+
+        .tech-item h4 {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 0.3rem;
+        }
+
+        .tech-item p {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        /* ─── DOWNLOAD CTA ─── */
+        #download {
+            padding: 6rem 2rem;
+            text-align: center;
+            position: relative;
+            max-width: 100%;
+        }
+
+        #download::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 300px;
+            background: radial-gradient(ellipse, rgba(200, 155, 60, 0.07) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .download-box {
+            max-width: 640px;
+            margin: 0 auto;
+            border: 1px solid var(--border-bright);
+            background: var(--bg-card);
+            padding: 3.5rem;
+            position: relative;
+        }
+
+        .download-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        .download-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1.2rem;
+            display: block;
+        }
+
+        .download-box h2 {
+            font-family: 'Cinzel', serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 0.8rem;
+        }
+
+        .download-box p {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            line-height: 1.7;
+            margin-bottom: 2rem;
+        }
+
+        .download-meta {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .download-meta span {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            letter-spacing: 0.06em;
+        }
+
+        .download-meta span::before {
+            content: '✓ ';
+            color: var(--hex-blue);
+        }
+
+        /* ─── FOOTER ─── */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 2rem 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: gap;
+            gap: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer-left {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .footer-left img {
+            width: 20px;
+            height: 20px;
+            opacity: 0.7;
+        }
+
+        .footer-left span {
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-dim);
+        }
+
+        .footer-right {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .footer-right a {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-decoration: none;
+            letter-spacing: 0.08em;
+            transition: color 0.2s;
+        }
+
+        .footer-right a:hover {
+            color: var(--gold);
+        }
+
+        .footer-disclaimer {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            opacity: 0.5;
+            text-align: center;
+            padding: 0.8rem 2rem 1.2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ─── ANIMATIONS ─── */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ─── SCROLL REVEAL ─── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: none;
+        }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 768px) {
+            nav ul {
+                display: none;
+            }
+
+            .screenshots-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .how-grid {
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+            }
+
+            .download-box {
+                padding: 2rem 1.5rem;
+            }
+
+            footer {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAV -->
+    <nav>
+        <a class="nav-logo" href="#">
+            <img src="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/icon.png"
+                alt="RiftVault Icon" />
+            <span>RiftVault</span>
+        </a>
+        <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#screenshots">Screenshots</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+            <li><a href="https://github.com/arjun-arihant/RiftVault" target="_blank">GitHub</a></li>
+            <li><a href="https://github.com/arjun-arihant/RiftVault/releases/latest" class="nav-cta">↓ Download</a></li>
+        </ul>
+    </nav>
+
+    <!-- HERO -->
+    <div class="hero">
+        <div class="hero-glow"></div>
+        <div class="hero-glow-blue"></div>
+
+        <div class="hero-badge">Free & Open Source — Windows 10/11</div>
+
+        <h1>
+            <span>RiftVault</span>
+            Your Entire<br />Skin Collection.<br />One View.
+        </h1>
+
+        <p class="hero-sub">
+            Browse every League of Legends skin you own — and every one you don't.
+            Apply skins directly during champion select. No browser, no hassle.
+        </p>
+
+        <div class="hero-actions">
+            <a href="https://github.com/arjun-arihant/RiftVault/releases/latest" class="btn-primary">
+                ↓ &nbsp;Download for Windows
+            </a>
+            <a href="https://github.com/arjun-arihant/RiftVault" target="_blank" class="btn-secondary">
+                ★ &nbsp;View on GitHub
+            </a>
+        </div>
+
+        <div class="hero-screenshot">
+            <div class="screenshot-frame">
+                <img src="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/screenshots/screenshot-main.png"
+                    alt="RiftVault main application view showing skin collection with stats dashboard"
+                    loading="eager" />
+            </div>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- FEATURES -->
+    <section id="features">
+        <div class="features-header reveal">
+            <div class="section-label">What You Get</div>
+            <h2 class="section-title">Everything About Your Collection</h2>
+            <p class="section-desc">A complete, beautiful, and local-first way to explore your League skin library.</p>
+        </div>
+
+        <div class="features-grid reveal">
+            <div class="feature-card">
+                <span class="feature-icon">🎭</span>
+                <h3>Full Collection View</h3>
+                <p>Every skin for every champion, owned and unowned. Owned skins glow vibrantly; unowned ones show with
+                    a sleek lock overlay.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🎮</span>
+                <h3>Apply In Champion Select</h3>
+                <p>Lock in a champion and RiftVault shows contextual Apply buttons instantly. Switch skins mid-select
+                    with a single click.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">📊</span>
+                <h3>Stats Dashboard</h3>
+                <p>See your total skin count broken down by rarity — Transcendent, Ultimate, Legendary, Epic, and more.
+                    Track chromas too.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">💎</span>
+                <h3>Chroma Gallery</h3>
+                <p>Click any chroma badge to open a dedicated gallery modal showing every color variant — owned and
+                    unowned — from Riot's CDN.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">💾</span>
+                <h3>Offline Viewing</h3>
+                <p>Your collection is cached locally in AppData. Browse all your skins anytime, even without the League
+                    client running.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🗂️</span>
+                <h3>Smart Sorting & Grouping</h3>
+                <p>Group by Champion, Tier, or All. Sort by Mastery points, alphabetically, or by most owned. Your
+                    collection, your way.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- SCREENSHOTS -->
+    <section id="screenshots">
+        <div class="reveal">
+            <div class="section-label">In Action</div>
+            <h2 class="section-title">See RiftVault</h2>
+            <p class="section-desc">A look at the features that set it apart.</p>
+        </div>
+
+        <div class="screenshots-layout reveal">
+            <div class="screenshot-item">
+                <div class="screenshot-frame">
+                    <img src="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/screenshots/screenshot-chromas.png"
+                        alt="RiftVault chroma gallery modal showing color variants for a skin" loading="lazy" />
+                </div>
+                <p class="screenshot-caption">Chroma Gallery — every variant in one modal</p>
+            </div>
+            <div class="screenshot-item">
+                <div class="screenshot-frame">
+                    <img src="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/screenshots/screenshot-card.png"
+                        alt="RiftVault skin card detail view with RP cost, 3D model link and wiki link"
+                        loading="lazy" />
+                </div>
+                <p class="screenshot-caption">Skin Card — RP cost, 3D model viewer, wiki links</p>
+            </div>
+            <div class="screenshot-item" style="grid-column: 1 / -1;">
+                <div class="screenshot-frame">
+                    <img src="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/screenshots/screenshot-apply-skin.png"
+                        alt="RiftVault apply skin in champion select during a League of Legends game" loading="lazy" />
+                </div>
+                <p class="screenshot-caption">Apply Skin In-Client — swap skins during champion select</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- HOW IT WORKS -->
+    <section id="how-it-works">
+        <div class="reveal">
+            <div class="section-label">Under the Hood</div>
+            <h2 class="section-title">How It Works</h2>
+            <p class="section-desc">Fully local. No accounts, no servers, no data sent anywhere.</p>
+        </div>
+
+        <div class="how-grid">
+            <div class="steps reveal">
+                <div class="step">
+                    <div class="step-num">01</div>
+                    <div>
+                        <h4>Client Detection</h4>
+                        <p>RiftVault uses PowerShell and WMI to locate your League lockfile across all drives and
+                            authenticate against the local LCU API — automatically, with no manual setup.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">02</div>
+                    <div>
+                        <h4>Inventory Fetch</h4>
+                        <p>Your owned skins, mastery points, and inventory data are pulled live from the League client's
+                            local API. Nothing is sent externally.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">03</div>
+                    <div>
+                        <h4>Asset Enrichment</h4>
+                        <p>Champion metadata, rarity classifications, and splash arts are pulled from Riot's Data Dragon
+                            CDN and CommunityDragon — cross-referenced for accuracy.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">04</div>
+                    <div>
+                        <h4>Local Cache</h4>
+                        <p>Everything is stored in your AppData directory for instant offline access. No cloud, no
+                            tracking, no accounts.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tech-stack reveal">
+                <div class="tech-item">
+                    <div class="tech-dot"></div>
+                    <div>
+                        <h4>LCU API</h4>
+                        <p>League Client Update API — official local API that powers the client itself. Used for live
+                            inventory and champion select skin application.</p>
+                    </div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-dot"></div>
+                    <div>
+                        <h4>Data Dragon (DDragon)</h4>
+                        <p>Riot's official CDN for champion metadata, tile splash arts, and profile icons. Always
+                            up-to-date with the latest patch.</p>
+                    </div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-dot"></div>
+                    <div>
+                        <h4>CommunityDragon (CDragon)</h4>
+                        <p>Community-maintained data source for authoritative rarity classifications, vault status, and
+                            additional UI assets not in DDragon.</p>
+                    </div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-dot"></div>
+                    <div>
+                        <h4>Electron + Node.js</h4>
+                        <p>Cross-process desktop app built with Electron. Main process handles LCU comms and data
+                            aggregation; renderer handles all UI.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- DOWNLOAD CTA -->
+    <section id="download">
+        <div class="download-box reveal">
+            <span class="download-icon">⬇</span>
+            <h2>Ready to Explore Your Vault?</h2>
+            <p>Download the latest release and have your full skin collection in front of you in under a minute. No
+                setup, no login.</p>
+            <a href="https://github.com/arjun-arihant/RiftVault/releases/latest" class="btn-primary"
+                style="display:inline-flex; font-size: 0.9rem; padding: 1rem 2.5rem;">
+                ↓ &nbsp;Download Latest Release
+            </a>
+            <div class="download-meta">
+                <span>Windows 10 / 11</span>
+                <span>Free forever</span>
+                <span>MIT Licensed</span>
+                <span>No account needed</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-left">
+            <img src="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/icon.png" alt="RiftVault" />
+            <span>RiftVault</span>
+        </div>
+        <div class="footer-right">
+            <a href="https://github.com/arjun-arihant/RiftVault" target="_blank">GitHub</a>
+            <a href="https://github.com/arjun-arihant/RiftVault/releases" target="_blank">Releases</a>
+            <a href="https://github.com/arjun-arihant/RiftVault/issues" target="_blank">Report a Bug</a>
+            <a href="https://github.com/arjun-arihant/RiftVault/blob/main/CHANGELOG.md" target="_blank">Changelog</a>
+        </div>
+    </footer>
+    <p class="footer-disclaimer">Not endorsed by or affiliated with Riot Games. League of Legends is a trademark of Riot
+        Games, Inc.</p>
+
+    <script>
+        // Scroll reveal
+        const reveals = document.querySelectorAll('.reveal');
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add('visible');
+                    io.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.1 });
+        reveals.forEach(el => io.observe(el));
+    </script>
+
+</body>
+
+</html>
