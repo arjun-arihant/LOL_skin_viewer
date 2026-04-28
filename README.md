@@ -41,10 +41,22 @@ Click on any owned skin to flip the card to view its **RP Cost** and additional 
 *Detailed skin view showing RP costs, release details, and one-click access to 3D Khada models.*
 
 ### 🎮 Apply Skin In-Client
-During champion select, **apply any owned skin directly from RiftVault** to your League client with a single click. The app detects when you've locked in a champion and shows a contextual "Apply in Client" button — both on the skin card grid and inside the detail modal. Real-time polling tracks which skin is currently equipped.
+During champion select, **apply any owned skin directly from RiftVault** to your League client with a single click. The app detects when you've locked in a champion and shows a contextual "Apply in Client" button — both on the skin card grid and inside the detail modal. Real-time polling tracks which skin is currently equipped, and the window auto-surfaces itself on lock-in so the controls are right there waiting.
 
 ![Apply Skin In-Client](assets/screenshots/screenshot-apply-skin.png)
 *The Apply in Client button appears on skin cards and in the modal after locking in a champion during champ select.*
+
+### ❤️ Wishlist
+Click the heart on any unowned skin to save it to a personal wishlist. A dedicated **Wishlist tab** gives you a clean grid of every skin you're chasing, with a live count. The list persists locally and auto-prunes the moment a skin becomes owned.
+
+![Wishlist Tab](assets/screenshots/screenshot-wishlist.png)
+*The Wishlist tab — every skin you're hunting, in one place.*
+
+### 🌐 In-App Browser Tabs
+External links no longer eject you to your default browser. The **Champion Wiki**, **Khada 3D Model Viewer**, and the **Skin Spotlight** YouTube search all open as tabs *inside* RiftVault. The tab bar across the top supports up to 8 simultaneous tabs and lets you flip between research and your collection without breaking flow.
+
+![In-App Browser Tabs](assets/screenshots/screenshot-tabs.png)
+*Wiki, 3D model viewer, and Skin Spotlight links open as in-app tabs — no context switching.*
 
 ### 💾 Offline Viewing & Caching
 Check your entire skin collection without even opening the League of Legends client! The app securely caches your inventory locally, allowing you to seamlessly browse your skins offline at any time.
@@ -54,10 +66,18 @@ Splash arts utilize the official Data Dragon `loadingUrl` slices to perfectly re
 
 ### 🗂️ Smart Grouping & Sorting
 Keep your collection organized organically:
-- **Group By:** Champion, Tier, or All.
-- **Sort By:** Mastery points, Alphabetical order, or Most Owned.
+- **Group By:** All, Champion, **Set** (skin line / universe), or Tier.
+- **Sort By:** Mastery points, Most Owned, **Most Complete %**, or Alphabetical. (`All` and `Tier` modes lock the sort to the only meaningful order.)
+- Group headers light up when you've collected every skin in that group.
 
-*Organize your collection exactly how you want it with smart filtering.*
+![Group by Set](assets/screenshots/screenshot-set-grouping.png)
+*Group by Set to chase down themed skin lines — Star Guardian, PROJECT, K/DA, and more.*
+
+### 💰 Collection RP Value
+A live mini-stat in the sidebar that sums up the RP cost of every owned non-base skin in your collection, with an approximate USD value alongside. A satisfying glance at how much you've invested in the Rift.
+
+### 🪟 System Tray
+Closing the window hides RiftVault to the system tray instead of quitting it — handy if you want it ready to go for the next champion select without taking up taskbar space. Right-click the tray icon to re-open or quit.
 
 ### ⚡ Instant Client Detection
 The app automatically scans your drives and processes to seamlessly detect your running League of Legends client and securely extract the necessary API credentials.
@@ -101,9 +121,9 @@ npm start
 
 ## 🛠️ How It Works
 
-1. **LCU API (League Client Update)**: The application utilizes intelligent PowerShell and WMI scripts to securely find your League `lockfile` across all drives. It then authenticates against the local LCU API to fetch your real-time inventory and mastery data.
+1. **LCU API (League Client Update)**: The application utilizes intelligent PowerShell and WMI scripts to securely find your League `lockfile` across all drives. It then authenticates against the local LCU API to fetch your real-time inventory and mastery data (with multi-endpoint fallbacks to stay resilient as Riot iterates the LCU).
 2. **Data Dragon (DDragon)**: Pulls static champion metadata, tile splash arts, and profile images directly from Riot's reliable global CDN.
-3. **CommunityDragon (CDragon)**: Acts as the authoritative source for skin rarity classifications and legacy identifiers, mapping unstandardized internal Riot variables into recognizable UI gems and strict Vault tracking.
+3. **CommunityDragon (CDragon)**: Acts as the authoritative source for skin rarity classifications, legacy identifiers, and **skin-line metadata** — mapping unstandardized internal Riot variables into recognizable UI gems, strict Vault tracking, and the named groups powering the Set view (`skins.json` + `skinlines.json`).
 
 ---
 
@@ -112,8 +132,10 @@ npm start
 | Command | Description |
 | :--- | :--- |
 | `npm start` | Launch the Electron application |
-| `npm run lint` | Run ESLint rules against the codebase |
-| `npm run format` | Format code beautifully with Prettier |
+| `npm run dev` | Launch with the `--dev` flag |
+| `npm run build` | Build the Windows portable executable to `dist/` |
+| `npx eslint .` | Lint the codebase |
+| `npx prettier . --write` | Format the codebase |
 
 ---
 
@@ -132,6 +154,7 @@ RiftVault/
 │   ├── layout.css         # App layout boundaries
 │   ├── sidebar.css        # Control dashboard
 │   ├── skin-card.css      # Splashes, borders, overlays
+│   ├── tabs.css           # In-app tab bar + webview panes
 │   └── ...           
 ├── assets/          # Static CDragon overlays and icons
 └── AGENTS.md        # Technical architecture documentation for AI agents
@@ -161,6 +184,6 @@ This application is made possible thanks to the amazing tools and data provided 
 ---
 
 <div align="center">
-  <p>Built with ❤️ by the community. Not endorsed by Riot Games.</p>
+  <p>RiftVault was created under Riot Games' <a href="https://www.riotgames.com/en/legal">"Legal Jibber Jabber"</a> policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project.</p>
   <p>Distributed under the <strong>MIT License</strong>.</p>
 </div>

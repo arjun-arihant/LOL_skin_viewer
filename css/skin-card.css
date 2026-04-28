@@ -329,6 +329,73 @@
   filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.7));
 }
 
+/* Legacy / Prestige text badges */
+.card-badge {
+  position: absolute;
+  z-index: 4;
+  padding: 2px 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  pointer-events: none;
+  border-radius: 2px;
+  left: 6px;
+}
+
+.legacy-badge {
+  bottom: calc(78 / 381 * 100%);
+  background: rgba(120, 90, 34, 0.85);
+  color: #f0e6d2;
+  border: 1px solid rgba(200, 155, 60, 0.4);
+}
+
+/* Wishlist heart button */
+.wishlist-btn {
+  position: absolute;
+  top: 11px;
+  right: 11px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  cursor: pointer;
+  pointer-events: auto;
+  padding: 0;
+  transition: transform 0.15s ease, border-color 0.2s ease;
+}
+
+.wishlist-btn svg {
+  width: 16px;
+  height: 16px;
+  color: #7b8a9e;
+  flex-shrink: 0;
+}
+
+.wishlist-btn:hover {
+  transform: scale(1.15);
+  border-color: #ff0022;
+}
+
+.wishlist-btn:hover svg {
+  color: #e84057;
+}
+
+.wishlist-btn.wishlisted {
+  border-color: #ff0022;
+  background: rgba(232, 64, 87, 0.2);
+}
+
+.wishlist-btn.wishlisted svg {
+  color: #ff0022;
+}
+
 /* Card enter animation */
 .skin-card-enter {
   opacity: 0;

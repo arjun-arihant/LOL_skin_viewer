@@ -8,54 +8,15 @@
   position: relative;
 }
 
-.top-bar {
-  padding: 16px 28px 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.section-title {
-  font-family: 'Cinzel', serif;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: 0.04em;
-}
-
-.btn-icon {
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--ease);
-}
-
-.btn-icon:hover {
-  background: var(--gold-dim);
-  border-color: var(--border-bright);
-  color: var(--gold);
-}
-
-.btn-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
+/* ═══ REFRESH BUTTON (Titlebar) ═══════════════════════════════════════════════ */
 .btn-refresh {
-  width: 64px;
-  height: 64px;
+  width: 52px;
+  height: 52px;
   background: url('../assets/refresh/button-replay-normal.png') center/cover no-repeat;
   border: none;
   cursor: pointer;
+  margin-top: 8px;
+  -webkit-app-region: no-drag;
 }
 
 .btn-refresh:hover {
@@ -114,4 +75,23 @@
   flex: 1;
   height: 1px;
   background: linear-gradient(to right, var(--border), transparent);
+}
+
+/* Champion completion badge */
+.group-complete .group-header-name {
+  color: var(--gold-light);
+}
+
+.group-complete .group-header-count {
+  color: var(--gold);
+}
+
+.group-complete .group-header-count::after {
+  content: ' ✓';
+  color: var(--gold-light);
+  font-size: 14px;
+}
+
+.group-complete .group-header-line {
+  background: linear-gradient(to right, var(--gold), transparent);
 }

@@ -160,10 +160,24 @@
 
 .titlebar-controls {
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   -webkit-app-region: no-drag;
   margin-left: 16px;
   align-self: flex-start;
-  margin-top: 10px;
+  margin-top: 6px;
+  gap: 0;
+}
+
+.titlebar-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.window-controls-row {
+  display: flex;
+  align-items: center;
 }
 
 .control-btn {

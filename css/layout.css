@@ -1,7 +1,39 @@
 /* ═══ APP LAYOUT ══════════════════════════════════════════════════════════════ */
 .app-layout {
   display: flex;
-  height: 100vh;
-  padding-top: var(--titlebar-h);
+  width: 100%;
+  height: 100%;
 }
 
+/* ═══ TAB PANES ══════════════════════════════════════════════════════════════ */
+.tab-pane {
+  display: none;
+  position: fixed;
+  top: calc(var(--titlebar-h) + var(--tabbar-h));
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.tab-pane.active {
+  display: flex;
+}
+
+.tab-pane-webview {
+  display: none;
+  position: fixed;
+  top: calc(var(--titlebar-h) + var(--tabbar-h));
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+}
+
+.tab-pane-webview.active {
+  display: block;
+}
+
+.tab-pane-webview webview {
+  width: 100%;
+  height: 100%;
+}

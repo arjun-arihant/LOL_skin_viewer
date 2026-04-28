@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/skin-card.css" />
   <link rel="stylesheet" href="css/overlays.css" />
   <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/tabs.css" />
 </head>
 
 <body>
@@ -39,25 +40,42 @@
     </div>
 
     <div class="titlebar-controls">
-      <button class="control-btn" id="btn-minimize" title="Minimize">
-        <svg viewBox="0 0 10 1" stroke="currentColor">
-          <line x1="0" y1="0.5" x2="10" y2="0.5" />
-        </svg>
-      </button>
-      <button class="control-btn" id="btn-maximize" title="Maximize">
-        <svg viewBox="0 0 10 10" stroke="currentColor" fill="none">
-          <rect x="0.5" y="0.5" width="9" height="9" />
-        </svg>
-      </button>
-      <button class="control-btn close" id="btn-close" title="Close">
-        <svg viewBox="0 0 10 10" stroke="currentColor">
-          <line x1="1" y1="1" x2="9" y2="9" />
-          <line x1="9" y1="1" x2="1" y2="9" />
-        </svg>
-      </button>
+      <div class="window-controls-row">
+        <button class="control-btn" id="btn-minimize" title="Minimize">
+          <svg viewBox="0 0 10 1" stroke="currentColor">
+            <line x1="0" y1="0.5" x2="10" y2="0.5" />
+          </svg>
+        </button>
+        <button class="control-btn" id="btn-maximize" title="Maximize">
+          <svg viewBox="0 0 10 10" stroke="currentColor" fill="none">
+            <rect x="0.5" y="0.5" width="9" height="9" />
+          </svg>
+        </button>
+        <button class="control-btn close" id="btn-close" title="Close">
+          <svg viewBox="0 0 10 10" stroke="currentColor">
+            <line x1="1" y1="1" x2="9" y2="9" />
+            <line x1="9" y1="1" x2="1" y2="9" />
+          </svg>
+        </button>
+      </div>
+      <div class="titlebar-actions-row">
+        <button class="btn-wishlist-titlebar" id="btn-wishlist-tab" title="Show Wishlist">♥</button>
+        <button class="btn-refresh" id="btn-refresh" title="Refresh"></button>
+      </div>
     </div>
   </header>
 
+  <!-- ─── TAB BAR ──────────────────────────────────────────────────── -->
+  <div class="tab-bar" id="tab-bar">
+    <button class="tab-item active" data-tab="home">
+      <span class="tab-icon">⚔</span>
+      <span class="tab-label">Collection</span>
+    </button>
+    <!-- Dynamic tabs injected by JS -->
+  </div>
+
+  <!-- ─── TAB PANE: HOME (Collection) ─────────────────────────────── -->
+  <div class="tab-pane active" id="pane-home">
   <!-- ─── MAIN LAYOUT ─────────────────────────────────────────────── -->
   <div class="app-layout">
 
@@ -111,7 +129,7 @@
             </div>
           </div>
 
-          <!-- Mini stats: legacy + chromas -->
+          <!-- Mini stats: legacy + chromas + value -->
           <div class="mini-stats" id="mini-stats">
             <div class="mini-stat">
               <img class="mini-stat-icon" src="assets/tier-icons/legacy.png" alt="Legacy" draggable="false">
@@ -120,6 +138,11 @@
             <div class="mini-stat">
               <img class="mini-stat-icon" src="assets/tier-icons/chroma.png" alt="Chromas" draggable="false">
               <span class="mini-stat-val" id="stat-chromas">0</span>
+            </div>
+            <div class="mini-stat" title="Estimated collection value">
+              <img class="mini-stat-icon" src="assets/icon-riot-points.png" alt="RP Value" draggable="false">
+              <span class="mini-stat-val" id="stat-value-rp">0</span>
+              <span class="mini-stat-sublabel" id="stat-value-usd"></span>
             </div>
           </div>
         </div>
@@ -150,26 +173,25 @@
           <span class="toggle-label">Show Base Skins</span>
         </label>
 
+
+
         <!-- Group By dropdown -->
         <div class="dropdown-wrap" id="group-dropdown">
           <button class="dropdown-btn"><span id="group-label">Champion</span><span
               class="dropdown-arrow">⇅</span></button>
           <div class="dropdown-menu" id="group-menu">
+            <button class="dropdown-item" data-value="all">All<span class="check">✓</span></button>
             <button class="dropdown-item active" data-value="champion">Champion<span class="check">✓</span></button>
+            <button class="dropdown-item" data-value="set">Set<span class="check">✓</span></button>
             <button class="dropdown-item" data-value="tier">Tier<span class="check">✓</span></button>
-            <button class="dropdown-item" data-value="all">All Skins<span class="check">✓</span></button>
           </div>
         </div>
 
-        <!-- Sort By dropdown -->
+        <!-- Sort By dropdown (items populated dynamically based on Group By) -->
         <div class="dropdown-wrap" id="sort-dropdown">
           <button class="dropdown-btn"><span id="sort-label">Mastery ▼</span><span
               class="dropdown-arrow">⇅</span></button>
-          <div class="dropdown-menu" id="sort-menu">
-            <button class="dropdown-item" data-value="alpha">Alphabetical ▲<span class="check">✓</span></button>
-            <button class="dropdown-item active" data-value="mastery">Mastery ▼<span class="check">✓</span></button>
-            <button class="dropdown-item" data-value="most-owned">Most Owned<span class="check">✓</span></button>
-          </div>
+          <div class="dropdown-menu" id="sort-menu"></div>
         </div>
 
         <!-- GitHub Support Link -->
@@ -181,11 +203,7 @@
 
     <!-- MAIN CONTENT -->
     <main class="main-content">
-      <!-- TOP BAR -->
-      <div class="top-bar" id="top-bar">
-        <div class="section-title" id="filter-label">ALL SKINS</div>
-        <button class="btn-refresh" id="btn-refresh" title="Refresh"></button>
-      </div>
+
 
       <!-- SKIN GRID -->
       <div class="skin-grid" id="skin-grid"></div>
@@ -198,6 +216,29 @@
       </div>
     </main>
   </div>
+  </div><!-- /pane-home -->
+
+  <!-- ─── TAB PANE: WISHLIST ───────────────────────────────────────── -->
+  <div class="tab-pane" id="pane-wishlist">
+    <div class="wishlist-pane">
+      <div class="wishlist-pane-header">
+        <div class="wishlist-pane-title">
+          <span class="wishlist-pane-heart">♥</span>
+          <h2>Your Wishlist</h2>
+        </div>
+        <p class="wishlist-pane-subtitle" id="wishlist-count-label">0 skins wishlisted</p>
+      </div>
+      <div class="wishlist-grid" id="wishlist-grid"></div>
+      <div class="wishlist-empty" id="wishlist-empty" style="display:none">
+        <div class="empty-icon">💫</div>
+        <h2>Your wishlist is empty</h2>
+        <p>Click the heart on any unowned skin to add it here</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── TAB PANE: WEBVIEWS (dynamic) ────────────────────────────── -->
+  <div id="webview-container"></div>
 
   <!-- ─── LOADING OVERLAY ─────────────────────────────────────────── -->
   <div class="loading-overlay" id="loading-overlay">
@@ -254,8 +295,14 @@
             Champion Wiki
           </a>
           <span style="color: rgba(200, 155, 60, 0.3);">|</span>
-          <a id="model-link" href="#" style="color: #c8aa6e; font-weight: bold; text-decoration: none;">View 3D
-            model</a>
+          <a id="model-link" href="#" style="color: #c8aa6e; font-weight: bold; text-decoration: none;">View 3D model</a>
+          <span style="color: rgba(200, 155, 60, 0.3);">|</span>
+          <a id="spotlight-link" href="#" style="color: var(--text-secondary); text-decoration: none; display: flex; align-items: center; gap: 4px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v14zM10 8v6l5-3z"/>
+            </svg>
+            Spotlight
+          </a>
           <span class="apply-separator" id="apply-separator"
             style="color: rgba(200, 155, 60, 0.3); display: none;">|</span>
           <button id="btn-apply-skin" class="btn-apply-skin" style="display: none;">

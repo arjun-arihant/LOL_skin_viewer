@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, screen, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, screen, shell, Tray, Menu } = require('electron');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
@@ -228,12 +228,12 @@ async function getChampionData() {
 // RARITY DETECTION (via CommunityDragon skins.json)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-let cdRarityMap = null; // skinId → rarity string
+let cdRarityMap = null; // skinId → { rarity, isLegacy, skinLines }
 
 async function fetchCDRarityMap() {
   if (cdRarityMap) return cdRarityMap;
   try {
-    console.log('[CDragon] Fetching skin rarity data...');
+    console.log('[CDragon] Fetching skin metadata...');
     const raw = await fetchJson(
       'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/skins.json'
     );
@@ -249,19 +249,46 @@ async function fetchCDRarityMap() {
       kcommon: 'standard',
       knorarity: 'standard',
     };
+    let legacyCount = 0;
     for (const [skinId, skinData] of Object.entries(raw)) {
       const r = (skinData.rarity || 'kNoRarity').toLowerCase();
+      const isLegacy = !!skinData.isLegacy;
+      if (isLegacy) legacyCount++;
       cdRarityMap[skinId] = {
         rarity: rarityMap[r] || 'standard',
-        isLegacy: !!skinData.isLegacy
+        isLegacy,
+        skinLines: Array.isArray(skinData.skinLines) ? skinData.skinLines : [],
       };
     }
-    console.log(`[CDragon] Loaded data for ${Object.keys(cdRarityMap).length} skins`);
+    console.log(`[CDragon] Loaded metadata for ${Object.keys(cdRarityMap).length} skins (${legacyCount} legacy)`);
   } catch (e) {
-    console.error('[CDragon] Failed to fetch rarity data:', e.message);
+    console.error('[CDragon] Failed to fetch skin metadata:', e.message);
     cdRarityMap = {};
   }
   return cdRarityMap;
+}
+
+let cdSkinLineNames = null; // id → name string
+
+async function fetchSkinLineNames() {
+  if (cdSkinLineNames) return cdSkinLineNames;
+  try {
+    console.log('[CDragon] Fetching skin line names...');
+    const raw = await fetchJson(
+      'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/skinlines.json'
+    );
+    cdSkinLineNames = {};
+    for (const entry of raw) {
+      if (entry.id && entry.name) {
+        cdSkinLineNames[entry.id] = entry.name;
+      }
+    }
+    console.log(`[CDragon] Loaded ${Object.keys(cdSkinLineNames).length} skin line names`);
+  } catch (e) {
+    console.error('[CDragon] Failed to fetch skin line names:', e.message);
+    cdSkinLineNames = {};
+  }
+  return cdSkinLineNames;
 }
 
 function detectRarity(skin, cdMap) {
@@ -326,14 +353,25 @@ async function buildOwnedSkins(creds) {
   // Fetch mastery data
   const masteryMap = {};
   try {
-    const mastery = await lcuRequest(creds.port, creds.password,
-      '/lol-collections/v1/inventories/' + summonerId + '/champion-mastery');
+    let mastery = await lcuRequest(creds.port, creds.password, '/lol-champion-mastery/v1/local-player/champion-mastery');
+    
+    // Fallback to older puuid endpoint if the above fails
+    if (!Array.isArray(mastery) && summoner.puuid) {
+      mastery = await lcuRequest(creds.port, creds.password, '/lol-collections/v1/inventories/' + summoner.puuid + '/champion-mastery');
+    }
+    // Fallback to older summonerId endpoint
+    if (!Array.isArray(mastery)) {
+      mastery = await lcuRequest(creds.port, creds.password, '/lol-collections/v1/inventories/' + summonerId + '/champion-mastery');
+    }
+
     if (Array.isArray(mastery)) {
       for (const m of mastery) {
         masteryMap[m.championId] = { level: m.championLevel, points: m.championPoints };
       }
     }
-  } catch { }
+  } catch (err) {
+    console.warn('[LCU] Failed to fetch mastery:', err.message);
+  }
 
   // Fetch chromas per champion (Chunked properly to avoid LCU Rate Limit drop)
   const chromaMap = {};
@@ -369,8 +407,8 @@ async function buildOwnedSkins(creds) {
 
   console.log(`[LCU] Chromas found for ${Object.keys(chromaMap).length} skins`);
 
-  // Fetch CommunityDragon rarity data
-  const cdMap = await fetchCDRarityMap();
+  // Fetch CommunityDragon rarity data + skin line names in parallel
+  const [cdMap, skinLineNames] = await Promise.all([fetchCDRarityMap(), fetchSkinLineNames()]);
 
   // Enrich all skins
   const skins = allSkinsRaw.map(skin => {
@@ -382,6 +420,7 @@ async function buildOwnedSkins(creds) {
     const mastery = masteryMap[champId] || { level: 0, points: 0 };
     const rarity = skinNum === 0 ? 'standard' : detectRarity(skin, cdMap);
 
+    const cdEntry = cdMap[skin.id] || {};
     return {
       id: skin.id,
       name: skin.name || `${champ.name} ${skinNum === 0 ? 'Classic' : 'Skin'}`,
@@ -391,13 +430,13 @@ async function buildOwnedSkins(creds) {
       skinNum,
       owned,
       isBase: skinNum === 0,
-      isLegacy: (cdMap[skin.id] && cdMap[skin.id].isLegacy) || false,
+      isLegacy: !!cdEntry.isLegacy,
       rarity,
       chromas,
       mastery,
       splashUrl: `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champ.id}_${skinNum}.jpg`,
       loadingUrl: `https://ddragon.leagueoflegends.com/cdn/img/champion/loading/${champ.id}_${skinNum}.jpg`,
-      skinLines: skin.skinLines || [],
+      skinLines: (cdEntry.skinLines && cdEntry.skinLines.length) ? cdEntry.skinLines : (skin.skinLines || []),
     };
   });
 
@@ -436,8 +475,13 @@ async function buildOwnedSkins(creds) {
     total: ownedSkins.length,
     version,
     lcuPort: creds.port,
+    skinLineNames,
   };
 }
+
+let tray = null;
+let isQuitting = false;
+let trayBalloonShown = false;
 
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -456,10 +500,40 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      webviewTag: true,
     },
   });
 
   mainWindow.loadFile('index.html');
+
+  // ─── SYSTEM TRAY ───────────────────────────────────────────────────────────
+  tray = new Tray(path.join(__dirname, 'assets/icon.ico'));
+  tray.setToolTip('RiftVault');
+  const trayMenu = Menu.buildFromTemplate([
+    { label: 'Show RiftVault', click: () => { mainWindow.show(); mainWindow.focus(); } },
+    { type: 'separator' },
+    { label: 'Quit', click: () => { isQuitting = true; app.quit(); } },
+  ]);
+  tray.setContextMenu(trayMenu);
+  tray.on('double-click', () => { mainWindow.show(); mainWindow.focus(); });
+
+  // Intercept close to hide to tray
+  mainWindow.on('close', (e) => {
+    if (!isQuitting) {
+      e.preventDefault();
+      mainWindow.hide();
+      if (!trayBalloonShown) {
+        trayBalloonShown = true;
+        try {
+          tray.displayBalloon({
+            title: 'RiftVault',
+            content: 'Still running in the tray. Right-click the icon to quit.',
+          });
+        } catch (err) { /* balloon unsupported on some systems */ }
+      }
+    }
+  });
+
   startChampSelectPolling();
 
   // Custom titlebar controls
@@ -556,6 +630,11 @@ ipcMain.handle('select-skin', async (event, skinId) => {
 
 // ─── APP LIFECYCLE ────────────────────────────────────────────────────────────
 
+app.on('before-quit', () => {
+  isQuitting = true;
+  if (tray) { tray.destroy(); tray = null; }
+});
+
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
@@ -571,6 +650,7 @@ let pollingInterval = null;
 let lastHoveredChampId = null;
 
 let lastChampSelectActive = false;
+let lastLockedIn = false;
 
 function startChampSelectPolling() {
   if (pollingInterval) return;
@@ -605,6 +685,14 @@ function startChampSelectPolling() {
             championId: champId || 0,
             currentSkinId: localPlayer.selectedSkinId || 0,
           });
+          // Surface the window on the lock-in edge (not on champ select start)
+          if (isLockedIn && !lastLockedIn) {
+            if (mainWindow && !mainWindow.isVisible()) {
+              mainWindow.show();
+            }
+            mainWindow.focus();
+          }
+          lastLockedIn = isLockedIn;
           lastChampSelectActive = true;
           nextDelay = 500; // faster polling during champ select
         }
@@ -619,6 +707,7 @@ function startChampSelectPolling() {
           });
           lastChampSelectActive = false;
         }
+        lastLockedIn = false;
       }
     } catch (e) {
       lastHoveredChampId = null;
@@ -631,6 +720,7 @@ function startChampSelectPolling() {
         });
         lastChampSelectActive = false;
       }
+      lastLockedIn = false;
     }
     pollingInterval = setTimeout(poll, nextDelay);
   }

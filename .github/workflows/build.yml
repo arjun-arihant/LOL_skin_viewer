@@ -24,11 +24,24 @@ jobs:
       - name: Build Electron App
         run: npm run build
 
+      - name: Extract latest changelog section
+        shell: pwsh
+        run: |
+          $content = Get-Content CHANGELOG.md -Raw
+          $pattern = '(?ms)^## \[[\d.]+\][^\n]*\r?\n.*?(?=\r?\n## \[|\z)'
+          $match = [regex]::Match($content, $pattern)
+          if ($match.Success) {
+            [System.IO.File]::WriteAllText("$PWD/RELEASE_NOTES.md", $match.Value.TrimEnd(), [System.Text.UTF8Encoding]::new($false))
+          } else {
+            Copy-Item CHANGELOG.md RELEASE_NOTES.md
+          }
+          Get-Content RELEASE_NOTES.md
+
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
           name: RiftVault v${{ github.ref_name }}
-          body_path: CHANGELOG.md
+          body_path: RELEASE_NOTES.md
           files: dist/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -9,8 +9,8 @@ let filteredSkins = [];
 let searchQuery = '';
 let showUnowned = false;
 let showBase = true;
-let groupBy = 'champion';   // champion | tier | all
-let sortBy = 'mastery';       // alpha | mastery | most-owned
+let groupBy = 'champion';   // all | champion | set | tier
+let sortBy = 'mastery';       // alpha | mastery | most-owned | most-complete
 let summoner = null;
 let isAnimatingStats = false;
 let LCU_PORT = null;
@@ -18,6 +18,11 @@ let rpPrices = {};
 let champSelectActive = false;
 let champSelectChampId = 0;
 let champSelectSkinId = 0;
+let skinLineNames = {}; // id → display name, populated from main process
+let filterLegacyOnly = false;
+let filterPrestigeOnly = false;
+let wishlist = new Set();
+let filterWishlistOnly = false;
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const RARITY_ORDER = { transcendent: 0, exalted: 1, ultimate: 2, mythic: 3, legendary: 4, epic: 5, standard: 6 };
@@ -52,7 +57,6 @@ const errorTitle = document.getElementById('error-title');
 const errorMsg = document.getElementById('error-msg');
 const btnRetry = document.getElementById('btn-retry');
 const skinGrid = document.getElementById('skin-grid');
-const filterLabel = document.getElementById('filter-label');
 const emptyState = document.getElementById('empty-state');
 const summHeader = document.getElementById('summoner-header');
 const btnRefresh = document.getElementById('btn-refresh');
@@ -64,11 +68,184 @@ const modalName = document.getElementById('modal-name');
 const modalId = document.getElementById('modal-id');
 const wikiLink = document.getElementById('wiki-link');
 const modelLink = document.getElementById('model-link');
+const spotlightLink = document.getElementById('spotlight-link');
+
+// ─── TAB MANAGER ──────────────────────────────────────────────────────────────
+const TabManager = {
+    tabs: [{ id: 'home', type: 'home', title: 'Collection', closable: false }],
+    activeTabId: 'home',
+    nextId: 1,
+    maxTabs: 8,
+
+    createTab(url, title, icon = '🌐') {
+        if (this.tabs.length >= this.maxTabs) {
+            // Close oldest non-home tab
+            const oldest = this.tabs.find(t => t.id !== 'home' && t.id !== 'wishlist');
+            if (oldest) this.closeTab(oldest.id);
+        }
+
+        const id = `tab-${this.nextId++}`;
+        const tab = { id, type: 'webview', title, url, icon, closable: true };
+        this.tabs.push(tab);
+
+        // Create tab button
+        const tabBtn = document.createElement('button');
+        tabBtn.className = 'tab-item';
+        tabBtn.dataset.tab = id;
+        tabBtn.innerHTML = `
+            <span class="tab-icon">${icon}</span>
+            <span class="tab-label">${title}</span>
+            <span class="tab-close" data-close="${id}">&times;</span>
+        `;
+        tabBtn.addEventListener('click', (e) => {
+            if (e.target.closest('.tab-close')) return;
+            this.switchTab(id);
+        });
+        tabBtn.querySelector('.tab-close').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.closeTab(id);
+        });
+        document.getElementById('tab-bar').appendChild(tabBtn);
+
+        // Create webview pane
+        const pane = document.createElement('div');
+        pane.className = 'tab-pane-webview';
+        pane.id = `pane-${id}`;
+        pane.innerHTML = `<webview src="${url}" style="width:100%;height:100%;" allowpopups></webview>`;
+        document.getElementById('webview-container').appendChild(pane);
+
+        this.switchTab(id);
+        return id;
+    },
+
+    openWishlistTab() {
+        // Toggle: if wishlist tab already exists and is active, switch back to home
+        const existing = this.tabs.find(t => t.id === 'wishlist');
+        if (existing) {
+            if (this.activeTabId === 'wishlist') {
+                this.switchTab('home');
+            } else {
+                this.switchTab('wishlist');
+            }
+            return;
+        }
+
+        // Create wishlist tab
+        const tab = { id: 'wishlist', type: 'wishlist', title: '♥ Wishlist', icon: '♥', closable: true };
+        this.tabs.push(tab);
+
+        const tabBtn = document.createElement('button');
+        tabBtn.className = 'tab-item';
+        tabBtn.dataset.tab = 'wishlist';
+        tabBtn.innerHTML = `
+            <span class="tab-icon" style="color:#e84057">♥</span>
+            <span class="tab-label">Wishlist</span>
+            <span class="tab-close" data-close="wishlist">&times;</span>
+        `;
+        tabBtn.addEventListener('click', (e) => {
+            if (e.target.closest('.tab-close')) return;
+            this.switchTab('wishlist');
+        });
+        tabBtn.querySelector('.tab-close').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.closeTab('wishlist');
+        });
+        document.getElementById('tab-bar').appendChild(tabBtn);
+
+        this.switchTab('wishlist');
+    },
+
+    switchTab(tabId) {
+        this.activeTabId = tabId;
+
+        // Update tab buttons
+        document.querySelectorAll('.tab-item').forEach(t => {
+            t.classList.toggle('active', t.dataset.tab === tabId);
+        });
+
+        // Update wishlist titlebar button
+        const wishBtn = document.getElementById('btn-wishlist-tab');
+        if (wishBtn) wishBtn.classList.toggle('active', tabId === 'wishlist');
+
+        // Hide all panes
+        document.getElementById('pane-home').classList.remove('active');
+        document.getElementById('pane-wishlist').classList.remove('active');
+        document.querySelectorAll('.tab-pane-webview').forEach(p => p.classList.remove('active'));
+
+        if (tabId === 'home') {
+            document.getElementById('pane-home').classList.add('active');
+            filterWishlistOnly = false;
+        } else if (tabId === 'wishlist') {
+            document.getElementById('pane-wishlist').classList.add('active');
+            this.renderWishlistGrid();
+        } else {
+            // Webview tab
+            const pane = document.getElementById(`pane-${tabId}`);
+            if (pane) pane.classList.add('active');
+        }
+    },
+
+    renderWishlistGrid() {
+        const grid = document.getElementById('wishlist-grid');
+        const empty = document.getElementById('wishlist-empty');
+        const label = document.getElementById('wishlist-count-label');
+        grid.innerHTML = '';
+
+        const wishlisted = allSkins.filter(s => wishlist.has(s.id));
+        label.textContent = `${wishlisted.length} skin${wishlisted.length !== 1 ? 's' : ''} wishlisted`;
+
+        if (wishlisted.length === 0) {
+            empty.style.display = 'flex';
+            return;
+        }
+        empty.style.display = 'none';
+
+        // Sort: by champion name then skin num
+        wishlisted.sort((a, b) => a.championName.localeCompare(b.championName) || a.skinNum - b.skinNum);
+
+        for (const skin of wishlisted) {
+            grid.appendChild(createSkinCard(skin));
+        }
+    },
+
+    closeTab(tabId) {
+        if (tabId === 'home') return;
+
+        // Remove from tabs array
+        this.tabs = this.tabs.filter(t => t.id !== tabId);
+
+        // Remove tab button
+        const tabBtn = document.querySelector(`.tab-item[data-tab="${tabId}"]`);
+        if (tabBtn) tabBtn.remove();
+
+        // Remove pane (only webview panes are dynamic; wishlist pane is permanent)
+        if (tabId !== 'wishlist') {
+            const pane = document.getElementById(`pane-${tabId}`);
+            if (pane) pane.remove();
+        }
+
+        // If closing the active tab, switch to home
+        if (this.activeTabId === tabId) {
+            this.switchTab('home');
+        }
+
+        // Reset wishlist button state
+        if (tabId === 'wishlist') {
+            const wishBtn = document.getElementById('btn-wishlist-tab');
+            if (wishBtn) wishBtn.classList.remove('active');
+        }
+    }
+};
 
 // ─── EXTERNAL LINKS ───────────────────────────────────────────────────────────
 document.getElementById('github-link').addEventListener('click', (e) => {
     e.preventDefault();
     window.riftVaultAPI.openExternal('https://github.com/arjun-arihant/RiftVault');
+});
+
+// ─── HOME TAB CLICK ───────────────────────────────────────────────────────────
+document.querySelector('.tab-item[data-tab="home"]').addEventListener('click', () => {
+    TabManager.switchTab('home');
 });
 
 // ─── AUDIO CONTROLLER ─────────────────────────────────────────────────────────
@@ -148,12 +325,84 @@ function updateStatsPanel(stats) {
     document.getElementById('stat-chromas').textContent = stats.ownedChromas;
 }
 
+// ─── WISHLIST HELPERS ─────────────────────────────────────────────────────────
+function loadWishlist() {
+    try {
+        const stored = localStorage.getItem('wishlist');
+        if (stored) wishlist = new Set(JSON.parse(stored));
+    } catch { wishlist = new Set(); }
+}
+
+function saveWishlist() {
+    localStorage.setItem('wishlist', JSON.stringify([...wishlist]));
+}
+
+function toggleWishlist(skinId) {
+    if (wishlist.has(skinId)) {
+        wishlist.delete(skinId);
+    } else {
+        wishlist.add(skinId);
+    }
+    saveWishlist();
+}
+
+function pruneWishlistAgainstOwned() {
+    let pruned = false;
+    for (const s of allSkins) {
+        if (s.owned && wishlist.has(s.id)) {
+            wishlist.delete(s.id);
+            pruned = true;
+        }
+    }
+    if (pruned) saveWishlist();
+}
+
+// ─── COLLECTION VALUE ────────────────────────────────────────────────────────
+function calculateCollectionValue() {
+    let totalRP = 0;
+    let pricedCount = 0;
+    for (const skin of allSkins) {
+        if (!skin.owned || skin.isBase) continue;
+        let cleanChampName = skin.championName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        let cleanSkinName = skin.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cleanSkinName !== cleanChampName && cleanSkinName.includes(cleanChampName)) {
+            cleanSkinName = cleanSkinName.replace(cleanChampName, '');
+        }
+        const key = `${cleanChampName}_${cleanSkinName}`;
+        const cost = rpPrices[key];
+        if (cost && cost !== 'Special') {
+            const rp = parseInt(cost, 10);
+            if (!isNaN(rp)) {
+                totalRP += rp;
+                pricedCount++;
+            }
+        }
+    }
+    return { totalRP, pricedCount };
+}
+
+function updateCollectionValue() {
+    const { totalRP } = calculateCollectionValue();
+    const valueEl = document.getElementById('stat-value-rp');
+    const usdEl = document.getElementById('stat-value-usd');
+    if (valueEl) {
+        valueEl.textContent = totalRP.toLocaleString();
+    }
+    if (usdEl) {
+        const usd = (totalRP * 0.0069).toFixed(2);
+        usdEl.textContent = `≈ $${usd}`;
+    }
+}
+
 // ─── FILTER & RENDER ─────────────────────────────────────────────────────────
 function applyFilters() {
     const q = searchQuery.toLowerCase();
     filteredSkins = allSkins.filter(s => {
         if (!showUnowned && !s.owned) return false;
         if (!showBase && s.isBase) return false;
+        if (filterLegacyOnly && !s.isLegacy) return false;
+        if (filterPrestigeOnly && !/prestige/i.test(s.name)) return false;
+        if (filterWishlistOnly && !wishlist.has(s.id)) return false;
         if (q && !s.name.toLowerCase().includes(q) && !s.championName.toLowerCase().includes(q)) return false;
         return true;
     });
@@ -165,54 +414,108 @@ function getSortedGroups(skins) {
         return [{ key: 'all', label: 'ALL SKINS', skins }];
     }
 
-    // Pre-calculate the true absolute totals for every group bypassing the filters
+    // Pre-calculate the true absolute totals for every group bypassing the filters.
+    // For "set", a single skin can belong to multiple skin lines — count it in each.
     const trueCounts = {};
-    for (const s of allSkins) {
-        const key = groupBy === 'champion' ? s.championKey : s.rarity;
+    const bumpCount = (key, owned) => {
         if (!trueCounts[key]) trueCounts[key] = { owned: 0, total: 0 };
         trueCounts[key].total++;
-        if (s.owned) trueCounts[key].owned++;
+        if (owned) trueCounts[key].owned++;
+    };
+    for (const s of allSkins) {
+        if (s.isBase) continue; // Sets/tiers should ignore base skins in the denominator
+        if (groupBy === 'champion') {
+            bumpCount(s.championKey, s.owned);
+        } else if (groupBy === 'tier') {
+            bumpCount(s.rarity, s.owned);
+        } else if (groupBy === 'set') {
+            const lines = (s.skinLines && s.skinLines.length) ? s.skinLines : [{ id: 'other' }];
+            for (const line of lines) {
+                bumpCount(String(line.id), s.owned);
+            }
+        }
     }
 
     const groups = {};
-    for (const s of skins) {
-        let key, label;
-        if (groupBy === 'champion') {
-            key = s.championKey;
-            label = s.championName;
-        } else if (groupBy === 'tier') {
-            key = s.rarity;
-            label = s.rarity.charAt(0).toUpperCase() + s.rarity.slice(1);
-        }
-
+    const ensureGroup = (key, label) => {
         if (!groups[key]) {
+            const tc = trueCounts[key] || { owned: 0, total: 0 };
             groups[key] = {
                 key, label, skins: [],
-                owned: trueCounts[key].owned,
-                total: trueCounts[key].total,
-                mastery: 0
+                owned: tc.owned,
+                total: tc.total,
+                mastery: 0,
             };
         }
-        groups[key].skins.push(s);
-        if (s.mastery) groups[key].mastery = Math.max(groups[key].mastery, s.mastery.points || 0);
+        return groups[key];
+    };
+
+    for (const s of skins) {
+        if (groupBy === 'champion') {
+            const g = ensureGroup(s.championKey, s.championName);
+            g.skins.push(s);
+            if (s.mastery) g.mastery = Math.max(g.mastery, s.mastery.points || 0);
+        } else if (groupBy === 'tier') {
+            const g = ensureGroup(s.rarity, s.rarity.charAt(0).toUpperCase() + s.rarity.slice(1));
+            g.skins.push(s);
+        } else if (groupBy === 'set') {
+            if (s.isBase) continue; // base skins have no set association
+            const lines = (s.skinLines && s.skinLines.length) ? s.skinLines : [{ id: 'other' }];
+            for (const line of lines) {
+                const lineId = String(line.id);
+                const label = lineId === 'other' ? 'Other' : (skinLineNames[lineId] || `Set ${lineId}`);
+                const g = ensureGroup(lineId, label);
+                g.skins.push(s);
+                if (s.mastery) g.mastery = Math.max(g.mastery, s.mastery.points || 0);
+            }
+        }
     }
 
     let sorted = Object.values(groups);
 
+    const pct = (g) => g.total > 0 ? g.owned / g.total : 0;
+
     if (groupBy === 'tier') {
         sorted.sort((a, b) => (RARITY_ORDER[a.key] ?? 99) - (RARITY_ORDER[b.key] ?? 99));
-    } else if (sortBy === 'mastery') {
-        sorted.sort((a, b) => b.mastery - a.mastery);
-    } else if (sortBy === 'most-owned') {
-        sorted.sort((a, b) => b.owned - a.owned);
-    } else {
-        sorted.sort((a, b) => a.label.localeCompare(b.label));
+    } else if (groupBy === 'champion') {
+        if (sortBy === 'mastery') {
+            sorted.sort((a, b) => b.mastery - a.mastery);
+        } else if (sortBy === 'most-owned') {
+            sorted.sort((a, b) => b.owned - a.owned);
+        } else if (sortBy === 'most-complete') {
+            sorted.sort((a, b) => pct(b) - pct(a));
+        } else {
+            sorted.sort((a, b) => a.label.localeCompare(b.label));
+        }
+    } else if (groupBy === 'set') {
+        // 'Other' always pinned to the bottom
+        const otherLast = (a, b) => {
+            if (a.key === 'other') return 1;
+            if (b.key === 'other') return -1;
+            return 0;
+        };
+        if (sortBy === 'mastery') {
+            sorted.sort((a, b) => otherLast(a, b) || (b.mastery - a.mastery));
+        } else if (sortBy === 'most-owned') {
+            sorted.sort((a, b) => otherLast(a, b) || (b.owned - a.owned));
+        } else if (sortBy === 'most-complete') {
+            sorted.sort((a, b) => otherLast(a, b) || (pct(b) - pct(a)));
+        } else {
+            sorted.sort((a, b) => otherLast(a, b) || a.label.localeCompare(b.label));
+        }
     }
 
     // Sort skins within each group: owned first, then by skinName alphabetical, then by skinNum
     for (const g of sorted) {
         g.skins.sort((a, b) => {
             if (a.owned !== b.owned) return a.owned ? -1 : 1;
+            
+            if (sortBy === 'mastery') {
+                const aMastery = a.mastery ? (a.mastery.points || 0) : 0;
+                const bMastery = b.mastery ? (b.mastery.points || 0) : 0;
+                if (aMastery !== bMastery) return bMastery - aMastery;
+            }
+            
             const nameCompare = a.name.localeCompare(b.name);
             if (nameCompare !== 0) return nameCompare;
             return a.skinNum - b.skinNum;
@@ -237,7 +540,8 @@ function renderGrid(skins) {
         // Group header
         if (groups.length > 1 || groupBy !== 'all') {
             const header = document.createElement('div');
-            header.className = 'group-header';
+            const isComplete = group.owned === group.total && group.total > 0;
+            header.className = 'group-header' + (isComplete ? ' group-complete' : '');
             header.innerHTML = `
                 <span class="group-header-name">${group.label.toUpperCase()}</span>
                 <span class="group-header-count">${group.owned}/${group.total}</span>
@@ -404,17 +708,40 @@ function createSkinCard(skin) {
         lock.className = 'lock-icon';
         lock.innerHTML = `<img src="${LOCK_ICON}" alt="Unowned" draggable="false">`;
         card.appendChild(lock);
+
+        // Wishlist heart for unowned skins
+        const heart = document.createElement('button');
+        heart.className = 'wishlist-btn' + (wishlist.has(skin.id) ? ' wishlisted' : '');
+        const HEART_FILLED = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+        const HEART_OUTLINE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+        heart.innerHTML = wishlist.has(skin.id) ? HEART_FILLED : HEART_OUTLINE;
+        heart.title = wishlist.has(skin.id) ? 'Remove from wishlist' : 'Add to wishlist';
+        heart.addEventListener('click', (e) => {
+            e.stopPropagation();
+            AudioController.play('toggle');
+            toggleWishlist(skin.id);
+            const isNowWished = wishlist.has(skin.id);
+            heart.className = 'wishlist-btn' + (isNowWished ? ' wishlisted' : '');
+            heart.innerHTML = isNowWished ? HEART_FILLED : HEART_OUTLINE;
+            heart.title = isNowWished ? 'Remove from wishlist' : 'Add to wishlist';
+            if (filterWishlistOnly) applyFilters();
+        });
+        card.appendChild(heart);
     }
 
     card.addEventListener('mouseenter', () => AudioController.play('hover'));
     card.addEventListener('click', (e) => {
-        // Prevent opening standard modal if interacting with Chroma Badge or Apply button
+        // Prevent opening standard modal if interacting with Chroma Badge, Apply button, or Wishlist
         if (e.target.closest('.chroma-badge')) return;
         if (e.target.closest('.card-apply-btn')) return;
+        if (e.target.closest('.wishlist-btn')) return;
 
         AudioController.play('click');
         openModal(skin);
     });
+
+    // (Legacy tag logically disabled)
+
     return card;
 }
 
@@ -462,11 +789,19 @@ function openModal(skin) {
     // Update Links
     wikiLink.onclick = (e) => {
         e.preventDefault();
-        window.riftVaultAPI.openExternal(getWikiUrl(skin.championName));
+        closeModal();
+        TabManager.createTab(getWikiUrl(skin.championName), skin.championName + ' Wiki', '🌐');
     };
     modelLink.onclick = (e) => {
         e.preventDefault();
-        window.riftVaultAPI.openExternal(`https://modelviewer.lol/model-viewer?id=${skin.id}`);
+        closeModal();
+        TabManager.createTab(`https://modelviewer.lol/model-viewer?id=${skin.id}`, skin.name + ' 3D', '🎮');
+    };
+    spotlightLink.onclick = (e) => {
+        e.preventDefault();
+        closeModal();
+        const query = encodeURIComponent(skin.name + ' Spotlight').replace(/%20/g, '+');
+        TabManager.createTab(`https://www.youtube.com/@SkinSpotlights/search?app=desktop&query=${query}`, skin.name + ' Spotlight', '📺');
     };
 
     modalBackdrop.style.display = 'flex';
@@ -657,9 +992,12 @@ async function loadSkins(isRefresh = false) {
             summoner = data.summoner;
             allSkins = data.skins;
             LCU_PORT = data.lcuPort;
+            pruneWishlistAgainstOwned();
             renderSummonerHeader(summoner, 'connecting'); // Render as connecting
             if (data.stats) updateStatsPanel(data.stats);
+            if (data.skinLineNames) skinLineNames = data.skinLineNames;
             applyFilters();
+            if (Object.keys(rpPrices).length > 0) updateCollectionValue();
             hideLoading(); // MUST CALL THIS to clear the default loading overlay
         }
     }
@@ -671,7 +1009,10 @@ async function loadSkins(isRefresh = false) {
 
     // 2. Fetch RP prices in background
     window.riftVaultAPI.getSkinPrices().then(res => {
-        if (res.success) rpPrices = res.data;
+        if (res.success) {
+            rpPrices = res.data;
+            if (allSkins.length > 0) updateCollectionValue();
+        }
     }).catch(e => console.error("Failed to load RP prices", e));
 
     // 3. Perform live sync
@@ -699,10 +1040,13 @@ async function loadSkins(isRefresh = false) {
         summoner = data.summoner;
         LCU_PORT = data.lcuPort;
         allSkins = data.skins.map(s => ({ ...s, version: data.version }));
+        pruneWishlistAgainstOwned();
 
         renderSummonerHeader(summoner, 'connected'); // Connected
         if (data.stats) updateStatsPanel(data.stats);
+        if (data.skinLineNames) skinLineNames = data.skinLineNames;
         applyFilters();
+        if (Object.keys(rpPrices).length > 0) updateCollectionValue();
         hideLoading();
 
     } catch (err) {
@@ -735,7 +1079,88 @@ document.getElementById('toggle-base').addEventListener('change', (e) => {
     applyFilters();
 });
 
+// ─── WISHLIST TAB BUTTON ──────────────────────────────────────────────────────
+document.getElementById('btn-wishlist-tab').addEventListener('click', () => {
+    AudioController.play('toggle');
+    TabManager.openWishlistTab();
+});
+
 // ─── DROPDOWN LOGIC ───────────────────────────────────────────────────────────
+
+// Sort options available per group mode.
+// `all` and `tier` have no user-selectable sort — the menu is locked to a fixed label.
+// `down` = desc arrow (▼), `up` = asc arrow (▲), null = no arrow
+const SORT_OPTIONS = {
+    champion: [
+        { value: 'mastery',       label: 'Mastery',         arrow: 'down' },
+        { value: 'most-owned',    label: 'Most Owned',      arrow: 'down' },
+        { value: 'most-complete', label: 'Most Complete %', arrow: 'down' },
+        { value: 'alpha',         label: 'Alphabetical',    arrow: 'up'   },
+    ],
+    set: [
+        { value: 'most-owned',    label: 'Most Owned',      arrow: 'down' },
+        { value: 'most-complete', label: 'Most Complete %', arrow: 'down' },
+        { value: 'alpha',         label: 'Alphabetical',    arrow: 'up'   },
+    ],
+    all:  { locked: 'Alphabetical', forcedValue: 'alpha' },
+    tier: { locked: 'Tier',         forcedValue: 'tier'  },
+};
+
+const ARROW_GLYPH = { down: ' ▼', up: ' ▲' };
+
+function formatSortLabel(opt) {
+    return opt.label + (opt.arrow ? ARROW_GLYPH[opt.arrow] : '');
+}
+
+function rebuildSortMenu() {
+    const menu = document.getElementById('sort-menu');
+    const label = document.getElementById('sort-label');
+    const wrap = document.getElementById('sort-dropdown');
+    const btn = wrap.querySelector('.dropdown-btn');
+
+    menu.innerHTML = '';
+    const config = SORT_OPTIONS[groupBy];
+
+    // Locked modes: show greyed out label, close the dropdown, force sortBy
+    if (config && config.locked) {
+        wrap.classList.add('locked');
+        btn.disabled = true;
+        label.textContent = config.locked;
+        sortBy = config.forcedValue;
+        return;
+    }
+
+    wrap.classList.remove('locked');
+    btn.disabled = false;
+
+    const options = config; // array
+    // If current sortBy isn't valid for this group mode, fall back to the first option
+    if (!options.some(o => o.value === sortBy)) {
+        sortBy = options[0].value;
+        localStorage.setItem('sortBy', sortBy);
+    }
+
+    for (const opt of options) {
+        const item = document.createElement('button');
+        item.className = 'dropdown-item' + (opt.value === sortBy ? ' active' : '');
+        item.dataset.value = opt.value;
+        item.innerHTML = `${formatSortLabel(opt)}<span class="check">✓</span>`;
+        item.addEventListener('click', () => {
+            AudioController.play('dropdownSelect');
+            sortBy = opt.value;
+            localStorage.setItem('sortBy', sortBy);
+            rebuildSortMenu();
+            menu.classList.remove('open');
+            applyFilters();
+        });
+        menu.appendChild(item);
+    }
+
+    // Update the visible label to match the active sort
+    const active = options.find(o => o.value === sortBy);
+    if (active) label.textContent = formatSortLabel(active);
+}
+
 function setupDropdown(wrapId, menuId, labelId, onChange) {
     const wrap = document.getElementById(wrapId);
     const menu = document.getElementById(menuId);
@@ -743,8 +1168,8 @@ function setupDropdown(wrapId, menuId, labelId, onChange) {
     const btn = wrap.querySelector('.dropdown-btn');
 
     btn.addEventListener('click', () => {
+        if (wrap.classList.contains('locked')) return;
         const isOpen = menu.classList.contains('open');
-        // Close all dropdowns first
         document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
         if (!isOpen) {
             AudioController.play('dropdownOpen');
@@ -767,14 +1192,26 @@ function setupDropdown(wrapId, menuId, labelId, onChange) {
 setupDropdown('group-dropdown', 'group-menu', 'group-label', (val) => {
     groupBy = val;
     localStorage.setItem('groupBy', groupBy);
+    rebuildSortMenu();
     applyFilters();
 });
 
-setupDropdown('sort-dropdown', 'sort-menu', 'sort-label', (val) => {
-    sortBy = val;
-    localStorage.setItem('sortBy', sortBy);
-    applyFilters();
-});
+// Sort dropdown: items are built dynamically by rebuildSortMenu().
+// Attach its own open/close handler since setupDropdown can't wire dynamic items.
+(function setupSortDropdownToggle() {
+    const wrap = document.getElementById('sort-dropdown');
+    const menu = document.getElementById('sort-menu');
+    const btn = wrap.querySelector('.dropdown-btn');
+    btn.addEventListener('click', () => {
+        if (wrap.classList.contains('locked')) return;
+        const isOpen = menu.classList.contains('open');
+        document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
+        if (!isOpen) {
+            AudioController.play('dropdownOpen');
+            menu.classList.add('open');
+        }
+    });
+})();
 
 // Close dropdowns on outside click
 document.addEventListener('click', (e) => {
@@ -807,12 +1244,17 @@ if (localStorage.getItem('showBase') !== null) {
 }
 if (localStorage.getItem('groupBy')) {
     groupBy = localStorage.getItem('groupBy');
+    // Migrate legacy value from a previous build
+    if (groupBy === 'skinline') {
+        groupBy = 'set';
+        localStorage.setItem('groupBy', groupBy);
+    }
 }
 if (localStorage.getItem('sortBy')) {
     sortBy = localStorage.getItem('sortBy');
 }
 
-// Preset the actual visual text of the dropdowns to match the stored initial state
+// Preset the group dropdown label + active state to match stored value
 function initDropdownVisuals(menuId, labelId, value) {
     const menu = document.getElementById(menuId);
     const label = document.getElementById(labelId);
@@ -822,7 +1264,13 @@ function initDropdownVisuals(menuId, labelId, value) {
     });
 }
 initDropdownVisuals('group-menu', 'group-label', groupBy);
-initDropdownVisuals('sort-menu', 'sort-label', sortBy);
+
+// Build the sort dropdown based on current groupBy (also handles locked modes)
+rebuildSortMenu();
+
+// (Wishlist now managed by TabManager, no localStorage restore needed)
+
+loadWishlist();
 
 document.getElementById('github-link').addEventListener('click', (e) => { e.preventDefault(); window.riftVaultAPI.openExternal('https://github.com/arjun-arihant/RiftVault'); });
 

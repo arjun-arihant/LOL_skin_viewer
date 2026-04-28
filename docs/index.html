@@ -8,9 +8,9 @@
     <!-- SEO -->
     <title>RiftVault — League of Legends Skin Collection Viewer</title>
     <meta name="description"
-        content="RiftVault is a free, open-source Windows desktop app to browse your full League of Legends skin collection — owned and unowned — powered by the LCU API. Apply skins in champion select instantly." />
+        content="RiftVault is a free, open-source Windows desktop app to browse your full League of Legends skin collection — owned and unowned — powered by the LCU API. Wishlist skins, browse the wiki and 3D models in-app, and apply skins in champion select instantly." />
     <meta name="keywords"
-        content="League of Legends skin viewer, LoL skin collection, LCU API, LoL desktop app, skin browser, chroma viewer, champion select skin, free LoL tool" />
+        content="League of Legends skin viewer, LoL skin collection, LCU API, LoL desktop app, skin browser, chroma viewer, champion select skin, skin wishlist, skin spotlight, free LoL tool" />
     <link rel="canonical" href="https://arjun-arihant.github.io/RiftVault/" />
 
     <!-- Open Graph -->
@@ -18,7 +18,7 @@
     <meta property="og:url" content="https://arjun-arihant.github.io/RiftVault/" />
     <meta property="og:title" content="RiftVault — League of Legends Skin Collection Viewer" />
     <meta property="og:description"
-        content="Browse your full League of Legends skin collection — owned and unowned. Apply skins directly from champion select. Free & open-source." />
+        content="Browse your full League of Legends skin collection — owned and unowned. Wishlist skins, open the wiki and 3D models in-app, and apply skins directly from champion select. Free & open-source." />
     <meta property="og:image"
         content="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/screenshots/screenshot-main.png" />
 
@@ -26,7 +26,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="RiftVault — League of Legends Skin Collection Viewer" />
     <meta name="twitter:description"
-        content="Browse your full LoL skin collection offline. Apply skins in champ select. Free & open-source." />
+        content="Browse your full LoL skin collection offline. Wishlist, in-app wiki & 3D model viewer, apply skins in champ select. Free & open-source." />
     <meta name="twitter:image"
         content="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/screenshots/screenshot-main.png" />
 
@@ -827,7 +827,8 @@
 
         <p class="hero-sub">
             Browse every League of Legends skin you own — and every one you don't.
-            Apply skins directly during champion select. No browser, no hassle.
+            Wishlist what you want, open the wiki and 3D models without leaving the app,
+            and apply skins directly during champion select.
         </p>
 
         <div class="hero-actions">
@@ -892,8 +893,32 @@
             <div class="feature-card">
                 <span class="feature-icon">🗂️</span>
                 <h3>Smart Sorting & Grouping</h3>
-                <p>Group by Champion, Tier, or All. Sort by Mastery points, alphabetically, or by most owned. Your
-                    collection, your way.</p>
+                <p>Group by All, Champion, Set (skin line), or Tier. Sort by Mastery, Most Owned, Most Complete %, or
+                    alphabetically. Group headers light up at 100%.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">❤️</span>
+                <h3>Wishlist</h3>
+                <p>Heart any unowned skin to save it to your personal wishlist tab. The list persists locally and
+                    auto-prunes the moment you unlock a skin.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🌐</span>
+                <h3>In-App Browser Tabs</h3>
+                <p>Champion Wiki, Khada 3D model viewer, and Skin Spotlight YouTube searches all open as tabs
+                    <em>inside</em> RiftVault. No context switching.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">💰</span>
+                <h3>Collection RP Value</h3>
+                <p>A live mini-stat that totals up the RP value of every owned skin in your collection — with an
+                    approximate USD equivalent right next to it.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🪟</span>
+                <h3>System Tray</h3>
+                <p>Closing the window minimizes RiftVault to the tray instead of quitting, so it's ready the moment your
+                    next champ select pops.</p>
             </div>
         </div>
     </section>
@@ -930,6 +955,27 @@
                         alt="RiftVault apply skin in champion select during a League of Legends game" loading="lazy" />
                 </div>
                 <p class="screenshot-caption">Apply Skin In-Client — swap skins during champion select</p>
+            </div>
+            <div class="screenshot-item">
+                <div class="screenshot-frame">
+                    <img src="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/screenshots/screenshot-wishlist.png"
+                        alt="RiftVault wishlist tab showing unowned skins saved by the user" loading="lazy" />
+                </div>
+                <p class="screenshot-caption">Wishlist — a dedicated tab for every skin you're chasing</p>
+            </div>
+            <div class="screenshot-item">
+                <div class="screenshot-frame">
+                    <img src="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/screenshots/screenshot-tabs.png"
+                        alt="RiftVault in-app browser tabs showing the Champion Wiki opened inside the application" loading="lazy" />
+                </div>
+                <p class="screenshot-caption">In-App Tabs — Wiki, 3D viewer, and Skin Spotlight without leaving the app</p>
+            </div>
+            <div class="screenshot-item" style="grid-column: 1 / -1;">
+                <div class="screenshot-frame">
+                    <img src="https://raw.githubusercontent.com/arjun-arihant/RiftVault/main/assets/screenshots/screenshot-set-grouping.png"
+                        alt="RiftVault skins grouped by skin line with completion percentages" loading="lazy" />
+                </div>
+                <p class="screenshot-caption">Group by Set — chase down themed skin lines with Most Complete % sort</p>
             </div>
         </div>
     </section>
@@ -1001,8 +1047,8 @@
                     <div class="tech-dot"></div>
                     <div>
                         <h4>CommunityDragon (CDragon)</h4>
-                        <p>Community-maintained data source for authoritative rarity classifications, vault status, and
-                            additional UI assets not in DDragon.</p>
+                        <p>Community-maintained data source for authoritative rarity classifications, vault/legacy
+                            status, skin-line metadata (powering the Set view), and UI assets not in DDragon.</p>
                     </div>
                 </div>
                 <div class="tech-item">

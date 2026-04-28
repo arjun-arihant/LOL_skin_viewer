@@ -196,6 +196,13 @@
   color: #a09070;
 }
 
+.mini-stat-sublabel {
+  font-size: 11px;
+  font-weight: 400;
+  color: #7b8a9e;
+  margin-top: -4px;
+}
+
 /* Divider */
 .panel-divider {
   border: none;
@@ -223,7 +230,81 @@
 }
 
 .panel-controls .toggle-row:last-of-type {
-  margin-bottom: 50px;
+  margin-bottom: 70px;
+}
+
+/* ═══ WISHLIST FILTER BUTTON ══════════════════════════════════════════════════ */
+.wishlist-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #5a3a3a;
+  border-radius: 0;
+  color: #a09b8c;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  margin-bottom: 40px;
+}
+
+.wishlist-filter-btn:hover {
+  border-color: #e84057;
+  color: #f0e6d2;
+  background: rgba(232, 64, 87, 0.08);
+}
+
+.wishlist-filter-btn.active {
+  border-color: #e84057;
+  color: #e84057;
+  background: rgba(232, 64, 87, 0.12);
+  box-shadow: 0 0 12px rgba(232, 64, 87, 0.2), inset 0 0 8px rgba(232, 64, 87, 0.08);
+}
+
+.wishlist-filter-heart {
+  font-size: 16px;
+  color: #e84057;
+  transition: transform 0.2s ease;
+  line-height: 1;
+}
+
+.wishlist-filter-btn:hover .wishlist-filter-heart {
+  transform: scale(1.2);
+}
+
+.wishlist-filter-btn.active .wishlist-filter-heart {
+  animation: heartbeat 1.2s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  15% {
+    transform: scale(1.25);
+  }
+
+  30% {
+    transform: scale(1);
+  }
+
+  45% {
+    transform: scale(1.15);
+  }
+
+  60% {
+    transform: scale(1);
+  }
+}
+
+.wishlist-filter-text {
+  letter-spacing: 0.02em;
 }
 
 /* Dropdown spacing */
@@ -344,6 +425,22 @@
 
 .dropdown-btn:hover {
   border-color: #d8b878;
+}
+
+/* Locked sort dropdown (e.g. when Group By = All or Tier) */
+.dropdown-wrap.locked .dropdown-btn {
+  cursor: not-allowed;
+  opacity: 0.5;
+  border-color: #4a4033;
+  color: #6a6558;
+}
+
+.dropdown-wrap.locked .dropdown-btn:hover {
+  border-color: #4a4033;
+}
+
+.dropdown-wrap.locked .dropdown-arrow {
+  color: #6a6558;
 }
 
 .dropdown-arrow {
