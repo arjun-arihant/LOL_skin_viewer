@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="css/overlays.css" />
   <link rel="stylesheet" href="css/animations.css" />
   <link rel="stylesheet" href="css/tabs.css" />
+  <link rel="stylesheet" href="css/achievements.css" />
 </head>
 
 <body>
@@ -59,6 +60,7 @@
         </button>
       </div>
       <div class="titlebar-actions-row">
+        <button class="btn-achievements-titlebar" id="btn-achievements-tab" title="Achievements">🏆</button>
         <button class="btn-wishlist-titlebar" id="btn-wishlist-tab" title="Show Wishlist">♥</button>
         <button class="btn-refresh" id="btn-refresh" title="Refresh"></button>
       </div>
@@ -237,6 +239,28 @@
     </div>
   </div>
 
+  <!-- ─── TAB PANE: ACHIEVEMENTS ─────────────────────────────────── -->
+  <div class="tab-pane" id="pane-achievements">
+    <div class="achievements-pane">
+      <div class="achievements-pane-header">
+        <div>
+          <div class="achievements-pane-title">
+            <span class="achievements-pane-trophy">🏆</span>
+            <h2>Achievements</h2>
+          </div>
+          <p class="achievements-pane-subtitle" id="achievements-count-label">0 achievements earned</p>
+        </div>
+        <label class="achievements-share-toggle" title="Show your summoner name on shared achievement cards">
+          <input type="checkbox" id="toggle-share-summoner" checked>
+          Show name on cards
+        </label>
+      </div>
+      <div class="achievements-scroll" id="achievements-scroll">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
   <!-- ─── TAB PANE: WEBVIEWS (dynamic) ────────────────────────────── -->
   <div id="webview-container"></div>
 
@@ -327,6 +351,25 @@
       </div>
     </div>
   </div>
+
+  <!-- ─── ACHIEVEMENTS WELCOME MODAL ──────────────────────────────── -->
+  <div class="achievements-welcome" id="achievements-welcome" style="display:none">
+    <div class="achievements-welcome-content">
+      <div class="aw-icon">🏆</div>
+      <h2>Achievements Unlocked!</h2>
+      <p class="aw-count-text" id="aw-count-text">
+        You've earned <span class="aw-count-num" id="aw-count-num">0</span> achievements based on your existing collection.
+      </p>
+      <button class="aw-view-btn" id="aw-view-btn">View Achievements</button>
+      <button class="aw-dismiss-btn" id="aw-dismiss-btn">Dismiss</button>
+    </div>
+  </div>
+
+  <!-- ─── ACHIEVEMENT TOASTS ────────────────────────────────────────── -->
+  <div class="achievement-toast-container" id="achievement-toast-container"></div>
+
+  <!-- ─── SHARE CARD CANVAS (hidden) ───────────────────────────────── -->
+  <canvas id="share-canvas" style="display:none"></canvas>
 
   <script src="renderer.js"></script>
 </body>

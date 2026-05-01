@@ -1,0 +1,243 @@
+{
+  "version": 1,
+  "editingGuide": {
+    "howToAdd": "Copy any achievement block, give it a unique 'id', and add it to the 'achievements' array. Restart the app to pick it up.",
+    "howToRemove": "Delete the achievement block. Already-earned localStorage entries will be silently ignored.",
+    "idWarning": "Never change an 'id' once shipped — it is the localStorage key for unlock tracking.",
+    "conditionTypes": {
+      "owned_count":         "{ type, min }                     — total owned non-base skins >= min",
+      "chroma_count":        "{ type, min }                     — total owned chromas >= min",
+      "legacy_count":        "{ type, min }                     — owned legacy skins >= min",
+      "prestige_count":      "{ type, min }                     — owned skins whose name contains 'Prestige' >= min",
+      "rarity_own":          "{ type, rarity }                  — own at least 1 skin of this rarity (transcendent/exalted/ultimate/mythic/legendary/epic/standard)",
+      "champion_complete":   "{ type, champId, minSkins? }      — all non-base skins owned for a champion (champId 0 = any; minSkins default 3)",
+      "skinline_complete":   "{ type, lineId, minSkins? }       — all skins in a skinline owned (lineId 0 = any; minSkins default 3)",
+      "specific_skins":      "{ type, mode, skinIds }           — mode 'any' = own at least 1; mode 'all' = own every listed skinId",
+      "chroma_complete_any": "{ type }                          — own all chromas for at least one skin",
+      "wishlist_count":      "{ type, min }                     — current wishlist has >= min skins",
+      "wishlist_history":    "{ type, min }                     — own >= min skins that were ever added to wishlist",
+      "rp_value":            "{ type, min }                     — estimated collection RP value >= min (needs RP price data loaded)",
+      "one_champion_pct":    "{ type, pct, minOwned }           — pct (0.0-1.0) of owned non-base skins belong to one champion; minOwned sets minimum owned threshold"
+    },
+    "tiers": "bronze | silver | gold | mythic",
+    "skinIdLookup": "Verify skin IDs via CDragon: https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/skins.json — or open DevTools in the app and type allSkins in the console."
+  },
+  "achievements": [
+    {
+      "id": "collector_10",
+      "category": "milestone",
+      "name": "Collector",
+      "description": "Own 10 skins. Every vault has to start somewhere.",
+      "tier": "bronze",
+      "icon": "🎴",
+      "condition": { "type": "owned_count", "min": 10 }
+    },
+    {
+      "id": "collector_50",
+      "category": "milestone",
+      "name": "Dedicated Collector",
+      "description": "Own 50 skins. You clearly know your way around the shop.",
+      "tier": "silver",
+      "icon": "🎴",
+      "condition": { "type": "owned_count", "min": 50 }
+    },
+    {
+      "id": "collector_100",
+      "category": "milestone",
+      "name": "Vault Owner",
+      "description": "Own 100 skins. The vault doors are wide open.",
+      "tier": "gold",
+      "icon": "🏛️",
+      "condition": { "type": "owned_count", "min": 100 }
+    },
+    {
+      "id": "collector_250",
+      "category": "milestone",
+      "name": "Skin Hoarder",
+      "description": "Own 250 skins. At this point it's a lifestyle.",
+      "tier": "gold",
+      "icon": "💎",
+      "condition": { "type": "owned_count", "min": 250 }
+    },
+    {
+      "id": "collector_500",
+      "category": "milestone",
+      "name": "The RiftVault",
+      "description": "Own 500 skins. You ARE the vault.",
+      "tier": "mythic",
+      "icon": "👑",
+      "condition": { "type": "owned_count", "min": 500 }
+    },
+    {
+      "id": "chroma_hunter",
+      "category": "milestone",
+      "name": "Chroma Hunter",
+      "description": "Own 25 chromas. Colour theory? Never heard of it.",
+      "tier": "bronze",
+      "icon": "🎨",
+      "condition": { "type": "chroma_count", "min": 25 }
+    },
+    {
+      "id": "chroma_collector",
+      "category": "milestone",
+      "name": "Chromatic",
+      "description": "Own 100 chromas. Every skin deserves the full rainbow.",
+      "tier": "silver",
+      "icon": "🌈",
+      "condition": { "type": "chroma_count", "min": 100 }
+    },
+    {
+      "id": "legendary_owner",
+      "category": "rarity",
+      "name": "Legendary",
+      "description": "Own at least one Legendary skin.",
+      "tier": "bronze",
+      "icon": "🔥",
+      "condition": { "type": "rarity_own", "rarity": "legendary" }
+    },
+    {
+      "id": "mythic_owner",
+      "category": "rarity",
+      "name": "Mythic Taste",
+      "description": "Own at least one Mythic skin.",
+      "tier": "silver",
+      "icon": "✨",
+      "condition": { "type": "rarity_own", "rarity": "mythic" }
+    },
+    {
+      "id": "ultimate_fan",
+      "category": "rarity",
+      "name": "Ultimate Fan",
+      "description": "Own at least one Ultimate skin. The real ones know.",
+      "tier": "gold",
+      "icon": "⚡",
+      "condition": { "type": "rarity_own", "rarity": "ultimate" }
+    },
+    {
+      "id": "exalted_taste",
+      "category": "rarity",
+      "name": "Exalted Taste",
+      "description": "Own at least one Exalted skin. Welcome to the top.",
+      "tier": "mythic",
+      "icon": "💫",
+      "condition": { "type": "rarity_own", "rarity": "exalted" }
+    },
+    {
+      "id": "champion_devotee",
+      "category": "completionist",
+      "name": "Champion Devotee",
+      "description": "Own every non-base skin for at least one champion (minimum 3 non-base skins required).",
+      "tier": "gold",
+      "icon": "🏆",
+      "condition": { "type": "champion_complete", "champId": 0, "minSkins": 3 }
+    },
+    {
+      "id": "set_curator",
+      "category": "completionist",
+      "name": "Set Curator",
+      "description": "Complete an entire skin line (minimum 3 skins in the line).",
+      "tier": "gold",
+      "icon": "🗂️",
+      "condition": { "type": "skinline_complete", "lineId": 0, "minSkins": 3 }
+    },
+    {
+      "id": "chroma_perfectionist",
+      "category": "completionist",
+      "name": "Chroma Perfectionist",
+      "description": "Own every chroma for at least one skin.",
+      "tier": "silver",
+      "icon": "🎯",
+      "condition": { "type": "chroma_complete_any" }
+    },
+    {
+      "id": "prestige_collector",
+      "category": "completionist",
+      "name": "Prestige Taste",
+      "description": "Own 3 or more Prestige skins.",
+      "tier": "gold",
+      "icon": "⭐",
+      "condition": { "type": "prestige_count", "min": 3 }
+    },
+    {
+      "id": "time_traveler",
+      "category": "discovery",
+      "name": "Time Traveler",
+      "description": "Own at least one Legacy skin. Classics never die.",
+      "tier": "bronze",
+      "icon": "⌚",
+      "condition": { "type": "legacy_count", "min": 1 }
+    },
+    {
+      "id": "museum_curator",
+      "category": "discovery",
+      "name": "Museum Curator",
+      "description": "Own 10 or more Legacy skins. You're basically an archivist.",
+      "tier": "silver",
+      "icon": "🏺",
+      "condition": { "type": "legacy_count", "min": 10 }
+    },
+    {
+      "id": "one_trick",
+      "category": "discovery",
+      "name": "One Trick",
+      "description": "80% or more of your owned skins belong to a single champion (minimum 10 skins owned).",
+      "tier": "gold",
+      "icon": "🎪",
+      "condition": { "type": "one_champion_pct", "pct": 0.80, "minOwned": 10 }
+    },
+    {
+      "id": "rp_hoarder_10k",
+      "category": "discovery",
+      "name": "Invested",
+      "description": "Your collection is worth at least 10,000 RP.",
+      "tier": "bronze",
+      "icon": "💰",
+      "condition": { "type": "rp_value", "min": 10000 }
+    },
+    {
+      "id": "rp_hoarder_50k",
+      "category": "discovery",
+      "name": "High Roller",
+      "description": "Your collection is worth at least 50,000 RP.",
+      "tier": "silver",
+      "icon": "💸",
+      "condition": { "type": "rp_value", "min": 50000 }
+    },
+    {
+      "id": "rp_hoarder_100k",
+      "category": "discovery",
+      "name": "Riot's Best Customer",
+      "description": "Your collection is worth at least 100,000 RP. Someone's been busy.",
+      "tier": "gold",
+      "icon": "🏦",
+      "condition": { "type": "rp_value", "min": 100000 }
+    },
+    {
+      "id": "wishlist_dreamer",
+      "category": "meta",
+      "name": "Wishful Thinker",
+      "description": "Add 10 or more skins to your wishlist.",
+      "tier": "bronze",
+      "icon": "💭",
+      "condition": { "type": "wishlist_count", "min": 10 }
+    },
+    {
+      "id": "wishlist_big_dreamer",
+      "category": "meta",
+      "name": "Sky High Wishlist",
+      "description": "Add 25 or more skins to your wishlist.",
+      "tier": "silver",
+      "icon": "🌠",
+      "condition": { "type": "wishlist_count", "min": 25 }
+    },
+    {
+      "id": "dream_achiever",
+      "category": "meta",
+      "name": "Dreams Do Come True",
+      "description": "Unlock a skin that was previously on your wishlist. Manifesting works.",
+      "tier": "gold",
+      "icon": "✅",
+      "condition": { "type": "wishlist_history", "min": 1 }
+    }
+  ]
+}

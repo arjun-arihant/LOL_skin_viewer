@@ -1,0 +1,28 @@
+[
+  {
+    "id": "baus_approved",
+    "streamer": "Baus",
+    "achievementName": "Baus Approved",
+    "category": "curator",
+    "tier": "gold",
+    "icon": "🪓",
+    "description": "Baus has publicly stated Lumberjack Sion is his all-time favourite Sion skin.",
+    "disclaimer": "Not affiliated with or endorsed by Baus (thebausffs). Used as factual commentary.",
+    "sourceUrl": "https://www.twitch.tv/thebausffs",
+    "sourceNote": "Skin ID 14003 = Lumberjack Sion. Verify via CDragon skins.json or the app's DevTools console (allSkins array). Champion ID formula: Math.floor(skinId / 1000).",
+    "condition": { "type": "specific_skins", "mode": "all", "skinIds": [14003] }
+  },
+  {
+    "id": "tyler1_certified",
+    "streamer": "Tyler1",
+    "achievementName": "T1 Certified",
+    "category": "curator",
+    "tier": "silver",
+    "icon": "🪙",
+    "description": "Tyler1 has notoriously expressed love for Draven and Draven Draven in particular.",
+    "disclaimer": "Not affiliated with or endorsed by Tyler1. Used as factual commentary.",
+    "sourceUrl": "https://www.twitch.tv/loltyler1",
+    "sourceNote": "Draven = champion 119. Verify Draven Draven skin ID in CDragon skins.json (search for 'Draven Draven').",
+    "condition": { "type": "specific_skins", "mode": "any", "skinIds": [119007, 119017, 119021] }
+  }
+]

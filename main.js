@@ -628,6 +628,24 @@ ipcMain.handle('select-skin', async (event, skinId) => {
   }
 });
 
+// ─── SAVE SHARE CARD ─────────────────────────────────────────────────────────
+
+ipcMain.handle('save-share-card', async (event, byteArray, suggestedName) => {
+  const result = await dialog.showSaveDialog({
+    title: 'Save Achievement Card',
+    defaultPath: suggestedName || 'achievement-card.png',
+    filters: [{ name: 'PNG Image', extensions: ['png'] }],
+  });
+  if (result.canceled) return { success: false };
+  try {
+    fs.writeFileSync(result.filePath, Buffer.from(byteArray));
+    return { success: true };
+  } catch (err) {
+    console.error('[Save Share Card]', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
 // ─── APP LIFECYCLE ────────────────────────────────────────────────────────────
 
 app.on('before-quit', () => {

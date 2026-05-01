@@ -23,6 +23,10 @@ let filterLegacyOnly = false;
 let filterPrestigeOnly = false;
 let wishlist = new Set();
 let filterWishlistOnly = false;
+let achievements = [];         // loaded from achievements.json + curator-picks.json
+let earnedAchievements = {};   // { id: timestamp } persisted in localStorage
+let wishlistHistory = new Set(); // ever-added skin IDs (never shrinks)
+let shareShowSummoner = true;
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const RARITY_ORDER = { transcendent: 0, exalted: 1, ultimate: 2, mythic: 3, legendary: 4, epic: 5, standard: 6 };
@@ -80,7 +84,7 @@ const TabManager = {
     createTab(url, title, icon = '🌐') {
         if (this.tabs.length >= this.maxTabs) {
             // Close oldest non-home tab
-            const oldest = this.tabs.find(t => t.id !== 'home' && t.id !== 'wishlist');
+            const oldest = this.tabs.find(t => t.id !== 'home' && t.id !== 'wishlist' && t.id !== 'achievements');
             if (oldest) this.closeTab(oldest.id);
         }
 
@@ -167,9 +171,17 @@ const TabManager = {
         const wishBtn = document.getElementById('btn-wishlist-tab');
         if (wishBtn) wishBtn.classList.toggle('active', tabId === 'wishlist');
 
+        const achBtn = document.getElementById('btn-achievements-tab');
+        if (achBtn) {
+            achBtn.classList.toggle('active', tabId === 'achievements');
+            const dot = achBtn.querySelector('.new-dot');
+            if (dot && tabId === 'achievements') dot.remove();
+        }
+
         // Hide all panes
         document.getElementById('pane-home').classList.remove('active');
         document.getElementById('pane-wishlist').classList.remove('active');
+        document.getElementById('pane-achievements').classList.remove('active');
         document.querySelectorAll('.tab-pane-webview').forEach(p => p.classList.remove('active'));
 
         if (tabId === 'home') {
@@ -178,6 +190,9 @@ const TabManager = {
         } else if (tabId === 'wishlist') {
             document.getElementById('pane-wishlist').classList.add('active');
             this.renderWishlistGrid();
+        } else if (tabId === 'achievements') {
+            document.getElementById('pane-achievements').classList.add('active');
+            renderAchievementsGrid();
         } else {
             // Webview tab
             const pane = document.getElementById(`pane-${tabId}`);
@@ -218,8 +233,8 @@ const TabManager = {
         const tabBtn = document.querySelector(`.tab-item[data-tab="${tabId}"]`);
         if (tabBtn) tabBtn.remove();
 
-        // Remove pane (only webview panes are dynamic; wishlist pane is permanent)
-        if (tabId !== 'wishlist') {
+        // Remove pane (only webview panes are dynamic; wishlist/achievements panes are permanent)
+        if (tabId !== 'wishlist' && tabId !== 'achievements') {
             const pane = document.getElementById(`pane-${tabId}`);
             if (pane) pane.remove();
         }
@@ -229,11 +244,50 @@ const TabManager = {
             this.switchTab('home');
         }
 
-        // Reset wishlist button state
+        // Reset wishlist / achievements button state
         if (tabId === 'wishlist') {
             const wishBtn = document.getElementById('btn-wishlist-tab');
             if (wishBtn) wishBtn.classList.remove('active');
         }
+        if (tabId === 'achievements') {
+            const achBtn = document.getElementById('btn-achievements-tab');
+            if (achBtn) achBtn.classList.remove('active');
+        }
+    },
+
+    openAchievementsTab() {
+        const existing = this.tabs.find(t => t.id === 'achievements');
+        if (existing) {
+            if (this.activeTabId === 'achievements') {
+                this.switchTab('home');
+            } else {
+                this.switchTab('achievements');
+            }
+            return;
+        }
+
+        const tab = { id: 'achievements', type: 'achievements', title: '🏆 Achievements', icon: '🏆', closable: true };
+        this.tabs.push(tab);
+
+        const tabBtn = document.createElement('button');
+        tabBtn.className = 'tab-item';
+        tabBtn.dataset.tab = 'achievements';
+        tabBtn.innerHTML = `
+            <span class="tab-icon">🏆</span>
+            <span class="tab-label">Achievements</span>
+            <span class="tab-close" data-close="achievements">&times;</span>
+        `;
+        tabBtn.addEventListener('click', (e) => {
+            if (e.target.closest('.tab-close')) return;
+            this.switchTab('achievements');
+        });
+        tabBtn.querySelector('.tab-close').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.closeTab('achievements');
+        });
+        document.getElementById('tab-bar').appendChild(tabBtn);
+
+        this.switchTab('achievements');
     }
 };
 
@@ -342,8 +396,544 @@ function toggleWishlist(skinId) {
         wishlist.delete(skinId);
     } else {
         wishlist.add(skinId);
+        addToWishlistHistory(skinId);
     }
     saveWishlist();
+}
+
+// ─── WISHLIST HISTORY ─────────────────────────────────────────────────────────
+function loadWishlistHistory() {
+    try {
+        const stored = localStorage.getItem('wishlistHistory');
+        if (stored) wishlistHistory = new Set(JSON.parse(stored));
+    } catch { wishlistHistory = new Set(); }
+}
+
+function saveWishlistHistory() {
+    localStorage.setItem('wishlistHistory', JSON.stringify([...wishlistHistory]));
+}
+
+function addToWishlistHistory(skinId) {
+    if (!wishlistHistory.has(skinId)) {
+        wishlistHistory.add(skinId);
+        saveWishlistHistory();
+    }
+}
+
+// ─── ACHIEVEMENTS PERSISTENCE ─────────────────────────────────────────────────
+function loadEarnedAchievements() {
+    try {
+        const stored = localStorage.getItem('achievements');
+        return stored ? JSON.parse(stored) : {};
+    } catch { return {}; }
+}
+
+function saveEarnedAchievements(data) {
+    localStorage.setItem('achievements', JSON.stringify(data));
+}
+
+// ─── ACHIEVEMENT CONDITION EVALUATOR ─────────────────────────────────────────
+function evaluateCondition(cond, skins, wHistory, prices) {
+    const owned = skins.filter(s => s.owned && !s.isBase);
+
+    switch (cond.type) {
+        case 'owned_count':
+            return owned.length >= cond.min;
+
+        case 'chroma_count': {
+            const total = owned.reduce((n, s) => n + (s.chromas ? s.chromas.owned : 0), 0);
+            return total >= cond.min;
+        }
+
+        case 'legacy_count':
+            return owned.filter(s => s.isLegacy).length >= cond.min;
+
+        case 'prestige_count':
+            return owned.filter(s => /prestige/i.test(s.name)).length >= cond.min;
+
+        case 'rarity_own':
+            return owned.some(s => s.rarity === cond.rarity);
+
+        case 'specific_skins': {
+            const ownedIds = new Set(skins.filter(s => s.owned).map(s => s.id));
+            if (cond.mode === 'all') return cond.skinIds.every(id => ownedIds.has(id));
+            return cond.skinIds.some(id => ownedIds.has(id));
+        }
+
+        case 'champion_complete': {
+            const min = cond.minSkins || 3;
+            const champOwned = {}, champTotal = {};
+            for (const s of skins) {
+                if (s.isBase) continue;
+                champTotal[s.championId] = (champTotal[s.championId] || 0) + 1;
+                if (s.owned) champOwned[s.championId] = (champOwned[s.championId] || 0) + 1;
+            }
+            if (cond.champId !== 0) {
+                const t = champTotal[cond.champId] || 0;
+                return t >= min && (champOwned[cond.champId] || 0) === t;
+            }
+            return Object.keys(champTotal).some(id =>
+                champTotal[id] >= min && (champOwned[id] || 0) === champTotal[id]
+            );
+        }
+
+        case 'skinline_complete': {
+            const min = cond.minSkins || 3;
+            const lineOwned = {}, lineTotal = {};
+            for (const s of skins) {
+                if (s.isBase || !s.skinLines || !s.skinLines.length) continue;
+                for (const line of s.skinLines) {
+                    const lid = String(line.id);
+                    lineTotal[lid] = (lineTotal[lid] || 0) + 1;
+                    if (s.owned) lineOwned[lid] = (lineOwned[lid] || 0) + 1;
+                }
+            }
+            if (cond.lineId !== 0) {
+                const lid = String(cond.lineId);
+                const t = lineTotal[lid] || 0;
+                return t >= min && (lineOwned[lid] || 0) === t;
+            }
+            return Object.keys(lineTotal).some(lid =>
+                lineTotal[lid] >= min && (lineOwned[lid] || 0) === lineTotal[lid]
+            );
+        }
+
+        case 'chroma_complete_any':
+            return owned.some(s =>
+                s.chromas && s.chromas.total > 0 && s.chromas.owned === s.chromas.total
+            );
+
+        case 'wishlist_count':
+            return wishlist.size >= cond.min;
+
+        case 'wishlist_history': {
+            const ownedIds = new Set(skins.filter(s => s.owned).map(s => s.id));
+            const matches = [...wHistory].filter(id => ownedIds.has(id)).length;
+            return matches >= cond.min;
+        }
+
+        case 'rp_value': {
+            if (!prices || !Object.keys(prices).length) return false;
+            let total = 0;
+            for (const s of owned) {
+                let cn = s.championName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                let sn = s.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (sn !== cn && sn.includes(cn)) sn = sn.replace(cn, '');
+                const cost = prices[`${cn}_${sn}`];
+                if (cost && cost !== 'Special') { const rp = parseInt(cost, 10); if (!isNaN(rp)) total += rp; }
+            }
+            return total >= cond.min;
+        }
+
+        case 'one_champion_pct': {
+            if (owned.length < cond.minOwned) return false;
+            const counts = {};
+            for (const s of owned) counts[s.championId] = (counts[s.championId] || 0) + 1;
+            const maxCount = Math.max(...Object.values(counts));
+            return maxCount / owned.length >= cond.pct;
+        }
+
+        default:
+            return false;
+    }
+}
+
+// ─── ACHIEVEMENT SCAN ─────────────────────────────────────────────────────────
+function scanAchievements() {
+    if (!achievements.length || !allSkins.length) return [];
+    const stored = loadEarnedAchievements();
+    const now = Date.now();
+    const newlyEarned = [];
+
+    for (const ach of achievements) {
+        if (stored[ach.id]) continue;
+        if (evaluateCondition(ach.condition, allSkins, wishlistHistory, rpPrices)) {
+            stored[ach.id] = now;
+            newlyEarned.push(ach);
+        }
+    }
+
+    if (newlyEarned.length) {
+        saveEarnedAchievements(stored);
+        earnedAchievements = stored;
+    } else {
+        earnedAchievements = stored;
+    }
+
+    return newlyEarned;
+}
+
+// ─── ACHIEVEMENT INIT (called after allSkins or prices load) ─────────────────
+function initAchievements() {
+    if (!achievements.length || !allSkins.length) return;
+
+    const isFirstRun = !localStorage.getItem('achievementsInitialized');
+    const newlyEarned = scanAchievements();
+
+    if (isFirstRun) {
+        localStorage.setItem('achievementsInitialized', '1');
+        const total = Object.keys(earnedAchievements).length;
+        if (total > 0) showAchievementsWelcome(total);
+    } else if (newlyEarned.length) {
+        newlyEarned.forEach(ach => showAchievementToast(ach));
+        showNewUnlockDot();
+    }
+}
+
+// ─── ACHIEVEMENT TOAST ────────────────────────────────────────────────────────
+function showAchievementToast(ach) {
+    const container = document.getElementById('achievement-toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'achievement-toast';
+    toast.innerHTML = `
+        <span class="toast-icon">${ach.icon}</span>
+        <div class="toast-text">
+            <span class="toast-label">Achievement Unlocked</span>
+            <span class="toast-name">${ach.name}</span>
+            <span class="toast-desc">${ach.description}</span>
+        </div>
+    `;
+    container.appendChild(toast);
+    AudioController.play('toggle');
+
+    setTimeout(() => {
+        toast.classList.add('toast-exit');
+        toast.addEventListener('animationend', () => toast.remove(), { once: true });
+    }, 5000);
+}
+
+// ─── NEW UNLOCK DOT ON TITLEBAR BUTTON ───────────────────────────────────────
+function showNewUnlockDot() {
+    const btn = document.getElementById('btn-achievements-tab');
+    if (!btn || btn.classList.contains('active') || btn.querySelector('.new-dot')) return;
+    const dot = document.createElement('span');
+    dot.className = 'new-dot';
+    btn.appendChild(dot);
+}
+
+// ─── ACHIEVEMENTS WELCOME MODAL ───────────────────────────────────────────────
+function showAchievementsWelcome(count) {
+    const modal = document.getElementById('achievements-welcome');
+    document.getElementById('aw-count-num').textContent = count;
+    modal.style.display = 'flex';
+
+    document.getElementById('aw-view-btn').onclick = () => {
+        modal.style.display = 'none';
+        TabManager.openAchievementsTab();
+    };
+    document.getElementById('aw-dismiss-btn').onclick = () => {
+        modal.style.display = 'none';
+    };
+}
+
+// ─── RENDER ACHIEVEMENTS GRID ─────────────────────────────────────────────────
+const CATEGORY_LABELS = {
+    milestone:     'Milestones',
+    rarity:        'Rarity',
+    completionist: 'Completionist',
+    discovery:     'Discovery',
+    meta:          'App',
+    curator:       'Curator Picks',
+};
+
+const CATEGORY_ORDER = ['milestone', 'rarity', 'completionist', 'discovery', 'meta', 'curator'];
+
+function renderAchievementsGrid() {
+    const scroll = document.getElementById('achievements-scroll');
+    const label = document.getElementById('achievements-count-label');
+    if (!scroll) return;
+    scroll.innerHTML = '';
+
+    const total = Object.keys(earnedAchievements).length;
+    label.textContent = `${total} of ${achievements.length} achievements earned`;
+
+    if (!achievements.length) {
+        scroll.innerHTML = `<div class="achievements-empty">
+            <div class="empty-icon">🏆</div>
+            <h2>No achievements loaded</h2>
+            <p>Check that achievements.json is present in the app folder.</p>
+        </div>`;
+        return;
+    }
+
+    const groups = {};
+    for (const ach of achievements) {
+        const cat = ach.category || 'meta';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(ach);
+    }
+
+    const orderedCats = CATEGORY_ORDER.filter(c => groups[c]);
+
+    for (const cat of orderedCats) {
+        const section = document.createElement('div');
+        section.className = 'achievements-section';
+
+        const sectionLabel = document.createElement('div');
+        sectionLabel.className = 'achievements-section-label';
+        sectionLabel.textContent = CATEGORY_LABELS[cat] || cat;
+        section.appendChild(sectionLabel);
+
+        const grid = document.createElement('div');
+        grid.className = 'achievements-grid';
+
+        for (const ach of groups[cat]) {
+            grid.appendChild(createAchievementCard(ach));
+        }
+
+        section.appendChild(grid);
+        scroll.appendChild(section);
+    }
+}
+
+function createAchievementCard(ach) {
+    const earned = !!earnedAchievements[ach.id];
+    const card = document.createElement('div');
+    card.className = `achievement-card ${earned ? 'earned' : 'locked'}`;
+    card.dataset.tier = ach.tier || 'bronze';
+
+    const tierChip = `<span class="achievement-tier-chip" data-tier="${ach.tier || 'bronze'}">${(ach.tier || 'bronze').toUpperCase()}</span>`;
+    const unlockDate = earned
+        ? `<div class="achievement-unlock-date">Unlocked ${new Date(earnedAchievements[ach.id]).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</div>`
+        : '';
+    const curatorBadge = ach.streamer
+        ? `<div class="achievement-curator-badge">⭐ ${ach.streamer}'s Pick</div>`
+        : '';
+    const disclaimer = ach.disclaimer
+        ? `<div class="achievement-disclaimer">${ach.disclaimer}</div>`
+        : '';
+    const shareBtn = earned
+        ? `<button class="achievement-share-btn" data-id="${ach.id}">
+               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/></svg>
+               Save Card
+           </button>`
+        : '';
+
+    card.innerHTML = `
+        <div class="achievement-card-top">
+            <span class="achievement-icon">${ach.icon}</span>
+            ${tierChip}
+        </div>
+        <div class="achievement-name">${ach.name}</div>
+        <div class="achievement-desc">${ach.description}</div>
+        ${curatorBadge}
+        ${unlockDate}
+        ${disclaimer}
+        ${shareBtn}
+    `;
+
+    if (earned) {
+        const btn = card.querySelector('.achievement-share-btn');
+        if (btn) {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                generateAndSaveShareCard(ach);
+            });
+        }
+    }
+
+    return card;
+}
+
+// ─── SHARE CARD GENERATOR ─────────────────────────────────────────────────────
+const TIER_COLORS = {
+    bronze: '#cd7f32',
+    silver: '#a8a9ad',
+    gold:   '#c89b3c',
+    mythic: '#ee4fa0',
+};
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    let cy = y;
+    for (const word of words) {
+        const test = line ? line + ' ' + word : word;
+        if (ctx.measureText(test).width > maxWidth && line) {
+            ctx.fillText(line, x, cy);
+            line = word;
+            cy += lineHeight;
+        } else {
+            line = test;
+        }
+    }
+    if (line) ctx.fillText(line, x, cy);
+    return cy;
+}
+
+function canvasRoundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+function generateAndSaveShareCard(ach) {
+    const canvas = document.getElementById('share-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 900;
+    canvas.height = 500;
+
+    // Background
+    const bg = ctx.createLinearGradient(0, 0, 900, 500);
+    bg.addColorStop(0, '#0c1119');
+    bg.addColorStop(1, '#080c14');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 900, 500);
+
+    // Subtle radial glow at center
+    const glow = ctx.createRadialGradient(450, 250, 50, 450, 250, 350);
+    glow.addColorStop(0, 'rgba(200,155,60,0.06)');
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, 900, 500);
+
+    // Outer border
+    ctx.strokeStyle = '#c89b3c';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(12, 12, 876, 476);
+
+    // Inner faint border
+    ctx.strokeStyle = 'rgba(200,155,60,0.2)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(18, 18, 864, 464);
+
+    // Tier accent bar (left edge)
+    const tierColor = TIER_COLORS[ach.tier] || TIER_COLORS.gold;
+    ctx.fillStyle = tierColor;
+    ctx.fillRect(12, 12, 4, 476);
+
+    // Large icon
+    ctx.font = '70px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(ach.icon, 112, 220);
+
+    // Vertical divider
+    ctx.strokeStyle = 'rgba(200,155,60,0.18)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(196, 50);
+    ctx.lineTo(196, 450);
+    ctx.stroke();
+
+    // "RIFTVAULT — ACHIEVEMENT UNLOCKED" header
+    ctx.font = '500 11px Inter, sans-serif';
+    ctx.fillStyle = '#7b8a9e';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('RIFTVAULT  —  ACHIEVEMENT UNLOCKED', 216, 60);
+
+    // Achievement name
+    ctx.font = '700 32px Cinzel, serif';
+    ctx.fillStyle = '#f0e6d2';
+    ctx.textBaseline = 'top';
+    ctx.fillText(ach.name, 216, 105);
+
+    // Tier chip
+    const chipText = (ach.tier || 'bronze').toUpperCase();
+    ctx.font = '700 10px Inter, sans-serif';
+    const chipW = ctx.measureText(chipText).width + 16;
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = tierColor;
+    canvasRoundRect(ctx, 216, 158, chipW, 20, 4);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = tierColor;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(chipText, 224, 168);
+
+    // Category label
+    const catLabel = (CATEGORY_LABELS[ach.category] || ach.category || '').toUpperCase();
+    ctx.font = '400 10px Inter, sans-serif';
+    ctx.fillStyle = '#7b8a9e';
+    ctx.fillText(catLabel, 216 + chipW + 10, 168);
+
+    // Description
+    ctx.font = '400 15px Inter, sans-serif';
+    ctx.fillStyle = '#a09b8c';
+    ctx.textBaseline = 'top';
+    wrapCanvasText(ctx, ach.description, 216, 200, 640, 22);
+
+    // Unlock date
+    if (earnedAchievements[ach.id]) {
+        const date = new Date(earnedAchievements[ach.id]).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        ctx.font = '400 12px Inter, sans-serif';
+        ctx.fillStyle = '#7b8a9e';
+        ctx.textBaseline = 'top';
+        ctx.fillText(`Unlocked ${date}`, 216, 295);
+    }
+
+    // Summoner name
+    if (shareShowSummoner && summoner) {
+        const name = summoner.gameName || summoner.displayName || '';
+        if (name) {
+            ctx.font = '600 18px Inter, sans-serif';
+            ctx.fillStyle = '#c89b3c';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(name, 216, 450);
+        }
+    }
+
+    // Curator disclaimer
+    if (ach.disclaimer) {
+        ctx.font = 'italic 9px Inter, sans-serif';
+        ctx.fillStyle = 'rgba(123,138,158,0.55)';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(ach.disclaimer, 216, 475);
+    }
+
+    // Riot attribution
+    ctx.font = '400 9px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(123,138,158,0.3)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('Uses assets by Riot Games. Not endorsed by Riot Games.', 882, 462);
+
+    // RiftVault watermark
+    ctx.font = '500 12px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(200,155,60,0.35)';
+    ctx.fillText('riftvault', 882, 478);
+
+    // Export to PNG and save via Electron
+    canvas.toBlob(async (blob) => {
+        const arrayBuffer = await blob.arrayBuffer();
+        const safeName = ach.name.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        await window.riftVaultAPI.saveShareCard([...new Uint8Array(arrayBuffer)], `riftvault-${safeName}.png`);
+    }, 'image/png');
+}
+
+// ─── ACHIEVEMENTS DATA LOADER ─────────────────────────────────────────────────
+async function loadAchievementsData() {
+    try {
+        const [achRes, curatorRes, takedownsRes] = await Promise.all([
+            fetch('./achievements.json'),
+            fetch('./curator-picks.json'),
+            fetch('./curator-takedowns.json'),
+        ]);
+
+        const achData = await achRes.json();
+        const curatorData = await curatorRes.json();
+        const takedowns = new Set(await takedownsRes.json());
+
+        const base = achData.achievements || [];
+        const curator = curatorData.filter(c => !takedowns.has(c.id));
+        achievements = [...base, ...curator];
+
+        initAchievements();
+    } catch (err) {
+        console.warn('[Achievements] Failed to load data:', err.message);
+    }
 }
 
 function pruneWishlistAgainstOwned() {
@@ -998,6 +1588,7 @@ async function loadSkins(isRefresh = false) {
             if (data.skinLineNames) skinLineNames = data.skinLineNames;
             applyFilters();
             if (Object.keys(rpPrices).length > 0) updateCollectionValue();
+            initAchievements();
             hideLoading(); // MUST CALL THIS to clear the default loading overlay
         }
     }
@@ -1011,7 +1602,10 @@ async function loadSkins(isRefresh = false) {
     window.riftVaultAPI.getSkinPrices().then(res => {
         if (res.success) {
             rpPrices = res.data;
-            if (allSkins.length > 0) updateCollectionValue();
+            if (allSkins.length > 0) {
+                updateCollectionValue();
+                initAchievements(); // re-scan now that RP prices are available
+            }
         }
     }).catch(e => console.error("Failed to load RP prices", e));
 
@@ -1047,6 +1641,7 @@ async function loadSkins(isRefresh = false) {
         if (data.skinLineNames) skinLineNames = data.skinLineNames;
         applyFilters();
         if (Object.keys(rpPrices).length > 0) updateCollectionValue();
+        initAchievements();
         hideLoading();
 
     } catch (err) {
@@ -1083,6 +1678,12 @@ document.getElementById('toggle-base').addEventListener('change', (e) => {
 document.getElementById('btn-wishlist-tab').addEventListener('click', () => {
     AudioController.play('toggle');
     TabManager.openWishlistTab();
+});
+
+// ─── ACHIEVEMENTS TAB BUTTON ──────────────────────────────────────────────────
+document.getElementById('btn-achievements-tab').addEventListener('click', () => {
+    AudioController.play('toggle');
+    TabManager.openAchievementsTab();
 });
 
 // ─── DROPDOWN LOGIC ───────────────────────────────────────────────────────────
@@ -1271,9 +1872,24 @@ rebuildSortMenu();
 // (Wishlist now managed by TabManager, no localStorage restore needed)
 
 loadWishlist();
+loadWishlistHistory();
+
+// Share card summoner toggle
+if (localStorage.getItem('shareShowSummoner') !== null) {
+    shareShowSummoner = localStorage.getItem('shareShowSummoner') === 'true';
+}
+const toggleShareSumm = document.getElementById('toggle-share-summoner');
+if (toggleShareSumm) {
+    toggleShareSumm.checked = shareShowSummoner;
+    toggleShareSumm.addEventListener('change', (e) => {
+        shareShowSummoner = e.target.checked;
+        localStorage.setItem('shareShowSummoner', shareShowSummoner);
+    });
+}
 
 document.getElementById('github-link').addEventListener('click', (e) => { e.preventDefault(); window.riftVaultAPI.openExternal('https://github.com/arjun-arihant/RiftVault'); });
 
+loadAchievementsData();
 loadSkins(false);
 
 if (window.riftVaultAPI.onLiveGameEvent) {

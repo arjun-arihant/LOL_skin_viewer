@@ -11,4 +11,5 @@ contextBridge.exposeInMainWorld('riftVaultAPI', {
     getSkinPrices: () => ipcRenderer.invoke('get-skin-prices'),
     onLiveGameEvent: (callback) => ipcRenderer.on('live-game-event', (event, data) => callback(data)),
     selectSkin: (id) => ipcRenderer.invoke('select-skin', id),
+    saveShareCard: (byteArray, suggestedName) => ipcRenderer.invoke('save-share-card', byteArray, suggestedName),
 });
